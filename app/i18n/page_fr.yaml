@@ -1,0 +1,21 @@
+#http://yaml-online-parser.appspot.com/
+#parameters example
+- h1: titre
+- table: 
+#TODO border:1
+  - tr: 
+    - td: test1
+    - td: test2
+- br: 
+- page avec 2 boutons 
+- button:
+    onclick: page('page3')
+    text: page3
+- page inexistante
+- button:
+    onclick: page('page4')
+    text: page4
+
+- Texte éèàù
+# tableau objet tableau objet => xml sans attribut
+# objet objet => attributs. pbm syntaxe: text=> contenu avec attributs
