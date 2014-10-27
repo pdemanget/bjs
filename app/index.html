@@ -1,0 +1,19 @@
+<html>
+<script src="cube.js"></script>
+<script>
+cube.test();
+requestOkText("test.json")
+.then(function (responseText) {
+    // If the HTTP response returns 200 OK, log the response text.
+    console.log(responseText);
+	alert(responseText);
+}, function (error) {
+    // If there's an error or a non-200 status code, log the error.
+    console.error(error);
+	alert(error);
+}, function (progress) {
+    // Log the progress as it comes in.
+    console.log("Request progress: " + Math.round(progress * 100) + "%");
+});
+</script>
+</html>
