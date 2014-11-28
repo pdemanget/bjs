@@ -43,6 +43,33 @@ var cube={
 			}
 		};
 		return me;
+	},
+	//arguments promises, return new  promise.
+	all: function(){
+		promises=arguments[0].length?arguments[0]:arguments;
+		var deferred = cube.defer();
+		var cb=function(){
+			for(var i=0;i<promises.length;i++){
+				if( !promises[i].isFinished()) return;
+			}
+			var successes=[];
+			var errors=[];
+			var isError=false;
+			for(var i=0;i<promises.length;i++){
+				successes.push(promises[i].successData);
+				errors.push(promises[i].errorData);
+				if(promises[i].errorData) isError=true;
+			}
+			if(isError){
+				deferred.resolve(successes);
+			}else{
+				deferred.reject(errors, successes);
+			}
+			
+		}
+		for(var i=0;i<promises.length;i++){
+			promises[i].then(cb,cb);
+		}
 	}
 }
 

@@ -19,3 +19,4 @@
 - Texte éèàù
 # tableau objet tableau objet => xml sans attribut
 # objet objet => attributs. pbm syntaxe: text=> contenu avec attributs
+#todo CLI conv xml yaml conv yaml json et inverse

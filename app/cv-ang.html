@@ -1,0 +1,32 @@
+<html><head><title>CV</title>
+
+<script src="b.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/angular.js/1.3.3/angular.min.js"></script>
+<script>
+//the test : 
+//alert ( JSON.stringify( jsyaml.load("a: a") ));
+
+var yhr=function(name){
+	return jsyaml.load(loadFile(name));
+};
+
+var cv = yhr("cv0.yaml");
+
+angular.module('cvapp',[]).controller('MainCtrl', function ($scope) {
+  $scope.cv=cv;
+});
+</script>
+</head><body ng-app="cvapp">
+<noscript>Javascript not started</noscript>
+<div ng-controller="MainCtrl">
+
+<!-- inclusion des balises du CV-->
+ <h1>{{cv.lastname}} {{cv.firstname}}<h1>
+ <h2 ng-repeat="title in cv.titles">{{title}}</h2>
+ 
+ <h1>Profil</h1>
+ <ul><li ng-repeat="p in cv.profile">{{p}}</li></ul>
+</div>
+
+<h1></h1>
+</body></html>

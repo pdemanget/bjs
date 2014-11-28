@@ -20,7 +20,7 @@ function init(){
 	r('b.js')+
 	r('c.js');
 	//loads yaml as js
-	page('page');
+	//page('page');
 	
 }
 
