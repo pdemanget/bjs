@@ -32,6 +32,10 @@ function page(no){
 
 /**
  * best compiler ever: from js to html
+ * 
+ * TODO:
+ * keep reference of generated DOM for bjs directives
+ * if elem isa directive: call function(js)->js (js to js conversion)
  */
 function js2Html(elem, attributes){
 	if (typeof (elem) === 'string') return elem;
