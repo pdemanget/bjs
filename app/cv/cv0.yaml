@@ -11,36 +11,36 @@ profile:
  - Spécialisé en Java, JEE, Angular, architecture Objet
 
 skills:
- Langages :
-  - Java
-  - Javascript
-  - C, C++
- Methodologies : 
-  - Scrum
-  - UML
- "Serveurs d’application" : 
-  - JBoss
-  - Tomcat
-  - Glassfish
-  - Apache 
- Javascript & HTML5 : 
-  - AngularJS
-  - JSP, JSTL, jQuery 
-  - ExtJS
- SGBDs : 
-  - ORACLE, DB2, Posgresql, H2, MySQL, MongoDB 
- Java : 
-  - JEE, EJB3, JMS
-  - JPA Toplink EclipseLink Hibernate
-  - Spring MVC
-  - ANTLR
- Outils :
-  - Jenkins
-  - JMeter/ SoapUI 
-  - Maven/ant
-  - Git /svn
-  - Npm/bower/grunt
-  - Junit karma jenkins
+ - Langages :
+   - Java
+   - Javascript
+   - C, C++
+ - Methodologies : 
+   - Scrum
+   - UML
+ - "Serveurs d’application" : 
+   - JBoss
+   - Tomcat
+   - Glassfish
+   - Apache 
+ - Javascript & HTML5 : 
+   - AngularJS
+   - JSP, JSTL, jQuery 
+   - ExtJS
+ - SGBDs : 
+   - ORACLE, DB2, Posgresql, H2, MySQL, MongoDB 
+ - Java : 
+   - JEE, EJB3, JMS
+   - JPA Toplink EclipseLink Hibernate 
+   - Spring MVC
+   - ANTLR
+ - Outils :
+   - Jenkins
+   - JMeter/ SoapUI 
+   - Maven/ant
+   - Git /svn
+   - Npm/bower/grunt
+   - Junit karma jenkins
  
 
 formations:
@@ -97,9 +97,8 @@ experience:
   environment: Java Spring Javascript AngularJS JSON REST Junit karma Jenkins Intellij Postgres Tomcat Liquibase 
 
  - 
-  entreprise:
-   title: CG64 Conseil Général
-   duration :  05/2014
+  enterprise: CG64 Conseil Général
+  duration :  05/2014
   project:
    title: Formation « Apprendre Java et l’Objet ».
    description: |
