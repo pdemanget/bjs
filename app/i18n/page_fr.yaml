@@ -9,11 +9,11 @@
 - br: 
 - page avec 2 boutons 
 - button:
-    onclick: page('page3')
+    onclick: b.page('page3')
     text: page3
 - page inexistante
 - button:
-    onclick: page('page4')
+    onclick: b.page('page4')
     text: page4
 
 - Texte éèàù
