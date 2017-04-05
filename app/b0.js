@@ -27,18 +27,21 @@ class Bjs{
 		//page('page');
 		
 	}
-	require(src){
-		let link=document.createElement('script');
-		link.src=src;
+	
+	_add(to,tag){
+		let link=document.createElement(tag);
+		return document.getElementsByTagName(to)[0].appendChild(link);
 
-		document.getElementsByTagName('head')[0].appendChild(link);
+	}
+	require(src){
+		this._add('head','script').src=src;
 	}
 	
 	w(s){document.write(s);}
 	t(tag, text, p){return "<"+tag+(p?' '+p:'')+">"+(text?text:'')+"</"+tag+">";	}
 	r(src){
 		//todo switch-case on extension
-		return t('script','','src="'+src+'"');
+		return this.t('script','','src="'+src+'"');
 	}
 	
 	rw(src){
@@ -46,8 +49,9 @@ class Bjs{
 	}
 	tw(tag, text, p){w(t(tag,text,p))}
 	docw(body,head,boot){
-		w('<!DOCTYPE html>');
+		this.w('<!DOCTYPE html>');
 		if (!head) head='';
+		let t=this.t;
 		var lt= t('html',t('head',t('meta','','charset="utf-8"')+t('script', boot?'init()':'var B={}')+head)+t('body',body),'lang=fr');
 		//var lt= t('html',t('head',t('meta','','charset="utf-8"')+t('script', boot?'':'var B={}')+head)+t('body',body+t('script', boot?'init()':'')),'lang=fr');
 		console.log (lt);
@@ -99,7 +103,7 @@ class Bjs{
 					var innerAtt={mutable:''};
 					var recur=this.js2Html(elem[i],innerAtt );
 					//var recur=js2Html(elem[i]);
-					res += t(i,recur,innerAtt.mutable)+'\n';
+					res += this.t(i,recur,innerAtt.mutable)+'\n';
 				}
 			}else{
 				res += this.js2Html(elem[i]);
@@ -111,60 +115,19 @@ class Bjs{
 	page(no){
 	//load page 2
 		this.require('js/js-yaml.js');
-		var header = r('js/js-yaml.js');
+		var header = this.r('js/js-yaml.js')
+		+ this.r('b0.js');
 		let yml = this.loadFile('i18n/'+no+'_fr.yaml');
 		let me = this;
+		//TODO fixme
 		setTimeout(()=>{
 			let obj = jsyaml.load(yml);
 			this.docw(header,this.js2Html(obj));
-		});
+		},100);
 	
 	}
 
 
 }
 
-var b=new Bjs();
-
-(function(){
-	//horrible shortcut part
-	//w: write
-	//t: tag write
-	//r: require
-	//o:Yomadr
-	w=function(s){}
-	t=function(tag, text, p){return "<"+tag+(p?' '+p:'')+">"+(text?text:'')+"</"+tag+">";	}
-	r=function(src){
-		//todo switch-case on extension
-		return t('script','','src="'+src+'"');
-	}
-	
-	rw=function(src){
-		w(r(src));
-	}
-	tw=function(tag, text, p){w(t(tag,text,p))	}
-	docw=function(body,head,boot){
-		w('<!DOCTYPE html>');
-		if (!head) head='';
-		var lt= t('html',t('head',t('meta','','charset="utf-8"')+t('script', boot?'init()':'var B={}')+head)+t('body',body),'lang=fr');
-		//var lt= t('html',t('head',t('meta','','charset="utf-8"')+t('script', boot?'':'var B={}')+head)+t('body',body+t('script', boot?'init()':'')),'lang=fr');
-		console.log (lt);
-		w(lt);
-		if (! boot) document.close();
-	}
-	//bootstrap part
-	
-	//t('button','','onclick="doShow()"');
-	//t('html',t('head')+t('body', t('h1', 'hello') ));
-	
-	
-	//var head=r('js/js-yaml.js')+
-	//r('js/i18n.js')+
-	//r('c.js');
-	//if(!B){
-	//	docw(t('script', 'init()'),head);
-		//docw('',head);
-		//}
-	//B={};
-	//docw(t('h1', 'hello')+t('button','','onclick="doShow()"'),head);
-}())
+window.b=new Bjs();

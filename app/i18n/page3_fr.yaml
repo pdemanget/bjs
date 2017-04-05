@@ -7,13 +7,13 @@
   - retour à page
 
   - button:
-      onclick: page('page')
+      onclick: b.page('page')
       text: page
 
 - p:
   - aller à page4
   - button:
-      onclick: page('page4')
+      onclick: b.page('page4')
       text: page4
 
 - Texte éèàù
