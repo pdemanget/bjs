@@ -1,7 +1,0 @@
-node_modules
-dist
-.tmp
-app/bower_components
-components
-.sass-cache
-*~
