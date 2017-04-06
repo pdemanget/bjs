@@ -9,13 +9,21 @@
 - br: 
 - page avec 2 boutons 
 - button:
-    onclick: b.page('page3')
+    onclick: b.page('example/page1.yaml')
     text: page3
 - page inexistante
 - button:
-    onclick: b.page('page4')
+    onclick: b.page('example/page4.yaml')
     text: page4
 
 - Texte éèàù
+- div:
+  - div with subdivs
+  - div:
+      class: cssClass
+      text: 
+        - aa
+
+##     - may contain another div.
 # tableau objet tableau objet => xml sans attribut
 # objet objet => attributs. pbm syntaxe: text=> contenu avec attributs

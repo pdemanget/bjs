@@ -33,7 +33,15 @@ class Bjs{
 
 	}
 	require(src){
-		this._add('head','script').src=src;
+		//this._add('head','script').src=src;
+		let tag='script';
+		let to='head';
+		let link=document.createElement(tag);
+		link.src=src;
+		let head = document.getElementsByTagName(to)[0];
+		head.insertBefore(link,head.firstChild);
+		return link;
+
 	}
 	
 	write(s){
@@ -103,6 +111,35 @@ class Bjs{
 		return null;
 	}
 	
+	
+	
+	/**
+	 * ajax('url').then(data=>{}).catch(err=>{});
+	 */
+	ajax(url,body,method) {
+		return new Promise(function (resolve, reject) {
+			var xhr = new XMLHttpRequest();
+		
+			try {
+				xhr.open(method||body?'POST':'GET', url);
+				//, false pour le mode syncrhone
+
+			} catch (e) {
+				this.isCrossOriginRestricted = true;
+			}
+			xhr.onerror=reject;
+			xhr.onload= ()=>{
+				status = (xhr.status === 1223) ? 204 :(xhr.status === 0 && (self.location || {}).protocol == 'file:') ? 200 : xhr.status;
+
+				if ((status >= 200 && status < 300) || (status === 304) || (status === ''))
+					resolve(xhr.responseText);
+				else {
+					reject(xhr.status);
+				}
+			};
+			xhr.send(body);
+		});
+	}
 
 
 
@@ -137,19 +174,19 @@ class Bjs{
 		return res
 	}
 	
-	page(no){
+	page(url){
 	//load page 2
-		this.require('js/js-yaml.js');
-		var header = this.script('js/js-yaml.js')
-		+ this.script('b0.js');
-		let yml = this.loadFile('i18n/'+no+'_fr.yaml');
-		let me = this;
-		//TODO fixme
-		setTimeout(()=>{
-			let obj = jsyaml.load(yml);
-			this.docAdd(header,this.js2Html(obj));
-		},100);
-	
+		this.require('js/js-yaml.js').onload=()=>{
+			
+			//this._add('head','meta').charset="utf-8";
+
+			var header = this.script('js/js-yaml.js')
+			+ this.script('b0.js');
+			this.ajax(url).then( yml=>{
+				let obj = jsyaml.load(yml);
+				this.docAdd(header,this.js2Html(obj));
+			});
+		}
 	}
 
 

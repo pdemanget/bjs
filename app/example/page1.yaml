@@ -7,13 +7,13 @@
   - retour à page
 
   - button:
-      onclick: b.page('page')
+      onclick: b.page('example/index.yaml')
       text: page
 
 - p:
   - aller à page4
   - button:
-      onclick: b.page('page4')
+      onclick: b.page('example/page4.yaml')
       text: page4
 
 - Texte éèàù

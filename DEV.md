@@ -3,9 +3,9 @@ files
 files are divided in layers.
 
 b0.js: injection in DOM, loading
-b1 
-b2 
-b3 
+b1 :yaml dependencies
+b2 :bindings
+b3 :components
 
 
 
@@ -26,3 +26,16 @@ Un arbre non équilibré a été écrit en utilisant « document.write() » prov
 
 L’utilisation d’XMLHttpRequest de façon synchrone sur le fil d’exécution principal est obsolète à cause de son impact négatif sur la navigation de l’utilisateur final. Consulter http://xhr.spec.whatwg.org/ pour plus d’informations.
 
+HTML
+====
+
+Standard Headers/links
+<!DOCTYPE html>
+<html lang="en"><head><title>reversi</title>
+<meta charset="utf-8"/>
+<!--
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+-->
+<link rel="stylesheet" href="app.css"/>
+</head><body>
+<script src="b.js"></script>

@@ -1,0 +1,20 @@
+idées locales:
+
+langage yomader=> renommé en bml
+transtypé bijectif en json, xml
+ 
+#body implicite si on veut
+
+body: 
+ h1 id=toto:hello
+ div:
+  p:
+   je ne suis pas un tag même si je fini par \:
+head:
+ script toto.js
+
+
+transtypé en json, xml, xtend
+
+:wq
+
