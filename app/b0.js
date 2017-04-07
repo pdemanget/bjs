@@ -33,15 +33,17 @@ class Bjs{
 
 	}
 	require(src){
-		//this._add('head','script').src=src;
-		let tag='script';
-		let to='head';
-		let link=document.createElement(tag);
-		link.src=src;
-		let head = document.getElementsByTagName(to)[0];
-		head.insertBefore(link,head.firstChild);
-		return link;
-
+		return new Promise(function (resolve, reject) {
+			
+			//this._add('head','script').src=src;
+			let tag='script';
+			let to='head';
+			let link=document.createElement(tag);
+			link.src=src;
+			let head = document.getElementsByTagName(to)[0];
+			head.insertBefore(link,head.firstChild);
+			link.onload=resolve;
+		});
 	}
 	
 	write(s){
@@ -115,6 +117,7 @@ class Bjs{
 	
 	/**
 	 * ajax('url').then(data=>{}).catch(err=>{});
+	 * cf. fetch
 	 */
 	ajax(url,body,method) {
 		return new Promise(function (resolve, reject) {
@@ -176,17 +179,21 @@ class Bjs{
 	
 	page(url){
 	//load page 2
-		this.require('js/js-yaml.js').onload=()=>{
+		this.require('js/js-yaml.js').then(script=>{
 			
 			//this._add('head','meta').charset="utf-8";
 
 			var header = this.script('js/js-yaml.js')
 			+ this.script('b0.js');
 			this.ajax(url).then( yml=>{
-				let obj = jsyaml.load(yml);
-				this.docAdd(header,this.js2Html(obj));
+				try{
+					let obj = jsyaml.load(yml);
+					this.docAdd(header,this.js2Html(obj));
+				}catch (e){
+					console.log(e);
+				}
 			});
-		}
+		});
 	}
 
 

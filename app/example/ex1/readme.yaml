@@ -1,0 +1,34 @@
+- h1: Scenario
+- button:
+    onclick: b.page('index.yaml')
+    text: index
+- br: 
+- h2: Form 
+- We will bind an object to the form 
+- in order to post via REST to couchDB
+- page inexistante.
+- h2: List
+- We need to request the DB and generate a Table/tr/td
+#
+- h2: Usage
+- pre:
+  - docker run -p 5984:5984 -d --name my-couchdb couchdb
+  - launch the index.html 
+#
+- h2: todo
+- h3: head & css
+- i: head
+- attribute that contains header and css transformation from js.
+- b: example  
+- pre:
+- "head:css:base.css.js title:"
+- h3: controller after page loading
+- load a js after page loading
+- h3: subview
+- load in subview instead of full body
+#
+#  
+#
+##     - may contain another div.
+# tableau objet tableau objet => xml sans attribut
+# objet objet => attributs. pbm syntaxe: text=> contenu avec attributs
