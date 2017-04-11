@@ -18,6 +18,11 @@ File contains:
 class Bjs{
 	//var isCrossOriginRestricted;
 	
+	
+	constructor(){
+		this.baseUrl='';
+	}
+	
 	init(){
 		//load page 1	
 		//reload because of suicide of document.write
@@ -33,18 +38,21 @@ class Bjs{
 
 	}
 	require(src){
+		var me=this;
 		return new Promise(function (resolve, reject) {
 			
 			//this._add('head','script').src=src;
 			let tag='script';
 			let to='head';
 			let link=document.createElement(tag);
-			link.src=src;
+			link.src=me.baseUrl+src;
 			let head = document.getElementsByTagName(to)[0];
 			head.insertBefore(link,head.firstChild);
-			link.onload=resolve;
+			link.onload=()=>{
+				resolve(true);
+			}
 		});
-	}
+	}	
 	
 	write(s){
 		document.write(s);
@@ -179,7 +187,29 @@ class Bjs{
 	
 	page(url){
 	//load page 2
-		this.require('js/js-yaml.js').then(script=>{
+/*
+ * 		Promise.all([
+			this.require('b1.js'),
+			this.require('b2.js'),
+			this.require('b3.js'),
+			this.require('b4.js'),
+			this.require('js/js-yaml.js')
+			]).catch(e=>{
+				console.log(e);
+			})
+ * */
+
+/*		this.require('b1.js')
+		.then(()=>this.require('b2.js'))
+*/
+		Promise.all([
+			this.require('b1.js'),
+			this.require('b2.js'),
+			this.require('b3.js'),
+			this.require('js/js-yaml.js')
+			]).catch(e=>{
+				console.log(e);
+			}).then(results=>{
 			
 			//this._add('head','meta').charset="utf-8";
 

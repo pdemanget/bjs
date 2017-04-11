@@ -9,12 +9,6 @@
  * Use databind with bval directive
 
  */
-
-b.extend=function(me,o){
-	for(k in o){
-		me[k]=o[k];
-	}
-};
 var me=this;
 b.extend(b,{
 	/**
@@ -103,10 +97,7 @@ b.extend(b,{
 		}
 	}
 
-}
-
-);//eof extends
-}//eof functiond
+});//eof extends
 
 var util={
 	defined:function(obj){

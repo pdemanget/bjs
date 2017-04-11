@@ -4,4 +4,6 @@ class Index{
 		
 	}
 }
+b.baseUrl='../../';
 window.index=new Index();
+b.page('index.yaml');
