@@ -13,7 +13,31 @@
 - h2: Usage
 - pre:
   - docker run -p 5984:5984 -d --name my-couchdb couchdb
+  - br:
   - launch the index.html 
+  - admin sur 
+  - a:
+     href: http://localhost:5984/_utils/
+     text: http://localhost:5984/_utils/
+- h3: CouchDB requests
+- ul:
+  - li:
+    - _find arguments
+    - pre: |
+        {
+        "selector": {
+            "year": {"$gt": 2010}
+        },
+        "fields": ["_id", "_rev", "year", "title"],
+        "sort": [{"year": "asc"}],
+        "limit": 2,
+        "skip": 0
+        }
+  - li: 
+    - get all documents
+    - a: 
+        href: http://localhost:5984/test/_all_docs?include_docs=true
+        text: http://localhost:5984/test/_all_docs?include_docs=true
 #
 - h2: todo
 - h3: head & css
@@ -26,6 +50,19 @@
 - load a js after page loading
 - h3: subview
 - load in subview instead of full body
+
+- h1: Misc
+- http://stackoverflow.com/questions/37275710/using-all-docskeys-to-query-db-and-specifying-which-fields-to-return
+- |
+    Post on _all_docs with keys 
+    {
+    "keys" : [
+        "Zingylemontart",
+        "Yogurtraita"
+    ]
+    }
+- https://pouchdb.com/
+
 #
 #  
 #

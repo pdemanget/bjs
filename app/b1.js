@@ -1,10 +1,5 @@
 // nothing
 
-b.extend=function(me,o){
-	for(k in o){
-		me[k]=o[k];
-	}
-};
 
 b.extend(b,{
 	/**

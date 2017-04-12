@@ -25,6 +25,7 @@ b.extend(b,{
 	},
 	/**
 	 * pull to input values of document by input name using parametered object keys.
+	 * Should we add new attreibutes to the object? use a from name in this case.
 	 */
 	pullForm: function(o){
 		for(var key in o){

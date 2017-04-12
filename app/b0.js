@@ -127,10 +127,9 @@ class Bjs{
 	 * ajax('url').then(data=>{}).catch(err=>{});
 	 * cf. fetch
 	 */
-	ajax(url,body,method) {
+	ajax(url,body,method, json) {
 		return new Promise(function (resolve, reject) {
 			var xhr = new XMLHttpRequest();
-		
 			try {
 				xhr.open(method||body?'POST':'GET', url);
 				//, false pour le mode syncrhone
@@ -138,7 +137,14 @@ class Bjs{
 			} catch (e) {
 				this.isCrossOriginRestricted = true;
 			}
+			if (json) {
+				xhr.setRequestHeader("Content-Type", "application/json");
+			}
+
+
 			xhr.onerror=reject;
+			
+			
 			xhr.onload= ()=>{
 				status = (xhr.status === 1223) ? 204 :(xhr.status === 0 && (self.location || {}).protocol == 'file:') ? 200 : xhr.status;
 
@@ -230,3 +236,9 @@ class Bjs{
 }
 
 window.b=new Bjs();
+
+b.extend=function(me,o){
+	for(k in o){
+		me[k]=o[k];
+	}
+};

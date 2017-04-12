@@ -4,21 +4,34 @@
 - button:
     onclick: b.page('readme.yaml')
     text: readme
+- button:
+    onclick: b.page('list.yaml')
+    text: list
+
 - br: 
 - h2: Form 
 - form: 
-  - "Name :"
-  - input:
-      type: text
-      name: name
-      placeholder: "Name"
-  - br:
-  - "Comment :"
-  - input:
-      type: text
-      name: comment
-      placeholder: Comment
-  
-  - button:
-    onclick: index.push
-    text: Push
+   action: "#"
+   0:
+   - "Name :"
+   - input:
+       type: text
+       name: name
+       placeholder: "Name"
+   - br:
+   - "Comment :"
+   - input:
+       type: text
+       name: comment
+       placeholder: Comment
+- button:
+      onclick: index.push()
+      text: Push
+      
+- button:
+      onclick: index.list()
+      text: List
+- button:
+      onclick: index.list2()
+      text: List2
+
