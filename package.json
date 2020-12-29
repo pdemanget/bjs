@@ -1,29 +1,17 @@
 {
   "name": "bjs",
-  "version": "0.0.0",
-  "dependencies": {},
-  "devDependencies": {
-    "grunt": "~0.4.1",
-    "grunt-contrib-coffee": "~0.7.0",
-    "grunt-contrib-uglify": "~0.2.0",
-    "grunt-bower-install": "~0.5.0",
-    
-        "grunt": "~0.4.1",
-        "grunt-contrib-clean": "*",
-        "grunt-contrib-concat": "*",
-        "grunt-contrib-copy": "*",
-        "grunt-contrib-jshint": "*",
-        "grunt-contrib-jasmine": "*",
-        "grunt-contrib-less": "*",
-        "grunt-contrib-uglify": "*",
-        "grunt-contrib-watch": "*",
-        "grunt-convert" : "*",
-        "grunt-lesslint": "*",
-        "grunt-karma": "*",
-        "karma-junit-reporter": "*",
-      "grunt-rev": "~0.1.0"
-  },
-  "engines": {
-    "node": ">=0.8.0"
+  "version": "1.0.0",
+  "description": "BJS no dependency vanilla framework",
+  "main": "b.js",
+  "repository": "git@github.com:pdemanget/bjs.git",
+  "author": "pdemanget <pdemanget@gmail.com>",
+  "license": "MIT",
+  "flat": true,
+  "dependencies": {
+    "typescript": "^4.1.3"
+  },"scripts": {
+    "build": "tsc -p ./src",
+    "start": "node nodeserver/web-server.js& tsc -p ./src -w",
+    "clean": "rm node_modules -rf"
   }
 }
