@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-var sys = require('sys'),
-    http = require('http'),
+var http = require('http'),
     fs = require('fs'),
     url = require('url'),
     events = require('events');
@@ -41,7 +40,7 @@ function HttpServer(handlers) {
 HttpServer.prototype.start = function(port) {
   this.port = port;
   this.server.listen(port);
-  sys.puts('Http Server running at http://localhost:' + port + '/');
+  console.log('Http Server running at http://localhost:' + port + '/');
 };
 
 HttpServer.prototype.parseUrl_ = function(urlString) {
@@ -55,7 +54,7 @@ HttpServer.prototype.handleRequest_ = function(req, res) {
   if (req.headers['user-agent']) {
     logEntry += ' ' + req.headers['user-agent'];
   }
-  sys.puts(logEntry);
+  console.log(logEntry);
   req.url = this.parseUrl_(req.url);
   var handler = this.handlers[req.method];
   if (!handler) {
@@ -111,9 +110,9 @@ StaticServlet.prototype.sendError_ = function(req, res, error) {
   res.write('<!doctype html>\n');
   res.write('<title>Internal Server Error</title>\n');
   res.write('<h1>Internal Server Error</h1>');
-  res.write('<pre>' + escapeHtml(sys.inspect(error)) + '</pre>');
-  sys.puts('500 Internal Server Error');
-  sys.puts(sys.inspect(error));
+  res.write('<pre>' + escapeHtml(JSON.stringify(error)) + '</pre>');
+  console.log('500 Internal Server Error');
+  console.log(error);
 };
 
 StaticServlet.prototype.sendMissing_ = function(req, res, path) {
@@ -130,7 +129,7 @@ StaticServlet.prototype.sendMissing_ = function(req, res, path) {
     ' was not found on this server.</p>'
   );
   res.end();
-  sys.puts('404 Not Found: ' + path);
+  console.log('404 Not Found: ' + path);
 };
 
 StaticServlet.prototype.sendForbidden_ = function(req, res, path) {
@@ -146,7 +145,7 @@ StaticServlet.prototype.sendForbidden_ = function(req, res, path) {
     escapeHtml(path) + ' on this server.</p>'
   );
   res.end();
-  sys.puts('403 Forbidden: ' + path);
+  console.log('403 Forbidden: ' + path);
 };
 
 StaticServlet.prototype.sendRedirect_ = function(req, res, redirectUrl) {
@@ -163,7 +162,7 @@ StaticServlet.prototype.sendRedirect_ = function(req, res, redirectUrl) {
     '">here</a>.</p>'
   );
   res.end();
-  sys.puts('301 Moved Permanently: ' + redirectUrl);
+  console.log('301 Moved Permanently: ' + redirectUrl);
 };
 
 StaticServlet.prototype.sendFile_ = function(req, res, path) {
