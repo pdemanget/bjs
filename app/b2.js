@@ -6,10 +6,11 @@
  * pushForm
  * pullForm
  * 
- * Use databind with bval directive
-
+ * BVAL: Use databind with bval directive
+ * 
+ * 
  */
-var me=this;
+var me=b;
 b.extend(b,{
 	/**
 	 * push to all input of document the attribute by input name
@@ -47,7 +48,7 @@ b.extend(b,{
 		this.change=function(){
 			var old=scope[key];
 			scope[key]=input[0].value;
-			scope.dwatchers[k].each(function(elt){
+			scope.dwatchers[key].each(function(elt){
 				elt(scope[key],old);
 			});
 		}
@@ -62,12 +63,13 @@ b.extend(b,{
 		* 
 	*/
 	dataBind: function(obj, elt){
+		var me = this;// one day JS will manage a real this
 		elt=elt||document;
 		obj.dwatchers={};
 		for( key in obj){
 			var input = elt.getElementsByName(key);
 			if (input.length){
-				input[0].onchange=new d.InputBinding(obj,key,input).change;
+				input[0].onchange=new me.InputBinding(obj,key,input).change;
 			}
 		}
 		obj.$apply=function(){me.apply(obj,elt)};
