@@ -1,0 +1,16 @@
+root = true
+
+[*]
+charset = utf-8
+
+[*.{js,cjs,mjs}]
+indent_style = space
+indent_size = 2
+line_length = 120
+skip_gitignore = true
+
+[{*.json,*.html,*.pug}]
+indent_style = space
+indent_size = 2
+line_length = 120
+skip_gitignore = true

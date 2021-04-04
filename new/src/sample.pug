@@ -1,0 +1,19 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="utf-8")
+    title= htmlWebpackPlugin.options.title
+    != htmlWebpackPlugin.tags.headTags
+  body
+    noscript Javascript not started
+    h1= htmlWebpackPlugin.options.title
+    form
+      label(for="firstname") Your firstname:
+      input(id="firstname" bbind="firstname" placeholder="Type here")
+    h2
+      | Your firstname is 
+      span(bval="firstname")
+    script.
+      document.addEventListener('bready', (event) => {
+        event.detail.watchers.firstname.push((value, old) => console.log(`firstname: ${old} -> ${value}`)); 
+      });
