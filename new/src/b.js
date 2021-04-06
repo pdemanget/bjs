@@ -16,6 +16,9 @@ class Bjs {
     this.doc = doc;
     this.scope = this.createScope();
     this.watchers = this.createWatchers();
+    this.$conditions = ['bif', 'bfor'];
+    this.$templates = this.createTemplates();
+    this.evaluateTemplates();
     this.findBinds();
     const bReadyEvent = new CustomEvent('bready', { detail: this });
     this.doc.dispatchEvent(bReadyEvent);
@@ -82,14 +85,137 @@ class Bjs {
     });
   }
 
+  valueChangedEvent(name, old, value) {
+    this.scope[name] = value;
+    (this.watchers[name] || []).forEach(watcher => watcher(value, old));
+    this.evaluateTemplates();
+    this.setBoundValues(name, this.scope, this.doc);
+  }
+
+  setBoundValues(name, scope, rootElt) {
+    const value = scope[name];
+    const selector = `* [bval="${name}"], * [bbind="${name}"]`;
+    for (let elt of rootElt.querySelectorAll(selector)) {
+      if (elt.type) {
+        elt.value = value;
+      } else {
+        elt.innerText = value;
+      }
+    }
+  }
+
+  createTemplates() {
+    const selector = this.$conditions.map(cond => `* [${cond}]`).join(',');
+    const templates = [];
+    for (let elt of [...this.doc.querySelectorAll(selector)].reverse()) {
+      const eltCloned = elt.cloneNode(true);
+      const template = document.createElement('template');
+      template.setAttribute('type', 'bjs');
+      for (let cond of this.$conditions) {
+        if (eltCloned.hasAttribute(cond)) {
+          template.setAttribute('cond', cond);
+          template.setAttribute('var', eltCloned.getAttribute(cond));
+          eltCloned.removeAttribute(cond);
+          break;
+        }
+      }
+      template.content.appendChild(eltCloned);
+      elt.parentElement.replaceChild(template, elt);
+      template.nbElts = 0;
+      templates.push(template);
+    }
+    return templates.slice().reverse().filter(template => template.isConnected);
+  }
+
+  evaluateTemplates() {
+    for (let template of this.$templates) {
+      this.evaluateTemplate(template);
+    }
+  }
+
+  evaluateTemplate(template) {
+    const cond = template.getAttribute('cond');
+    const varName = template.getAttribute('var');
+    if (!cond || !varName) {
+      return;
+    }
+    const condCamel = cond[0].toUpperCase() + cond.substring(1);
+    const funcName = `renderTemplate${condCamel}`;
+    if (funcName in this) {
+      const elements = this[funcName](template.content.firstChild, varName);
+      // remove previously inserted elements
+      for (let i = 0; i < template.nbElts; i++) {
+        template.nextSibling && template.nextSibling.remove();
+      }
+      template.nbElts = 0;
+      if (elements && elements.length) {
+        for (let element of elements) {
+          // render recursively any sub template of each element
+          for (let subTemplate of element.querySelectorAll('template')) {
+            if (subTemplate.getAttribute('type') == 'bjs') {
+              this.evaluateTemplate(subTemplate);
+            }
+          }
+        }
+        template.after(...elements);
+        template.nbElts = elements.length;
+      }
+    } else {
+      console.error(`${funcName} is not defined in BJS`);
+    }
+  }
+
+  renderTemplateBif(element, varName) {
+    const elements = [];
+    const value = this.scope[varName];
+    if (value) {
+      elements.push(element.cloneNode(true));
+    }
+    return elements;
+  }
+
+  renderTemplateBfor(element, varName) {
+    const elements = [];
+    const lst = this.scope[varName];
+    // TODO handle maps and any iterable objects
+    if (lst && lst.length) {
+      for (let i = 0; i < lst.length; i++) {
+        const oneElt = element.cloneNode(true);
+        // TODO nested of nested of nested ... bfor
+        // introduce $super
+        const localScope = {
+          "$index": i,
+          "$value": lst[i],
+        };
+        this.setBoundValues('$index', localScope, oneElt);
+        this.setBoundValues('$value', localScope, oneElt);
+        elements.push(oneElt);
+      }
+    }
+    return elements;
+  }
+
   findBinds() {
-    const bindElts = this.doc.querySelectorAll('* [bbind]');
-    for (let elt of bindElts) {
+    const selector = '* [bbind]';
+    for (let elt of this.doc.querySelectorAll(selector)) {
       const varName = elt.getAttribute('bbind').trim()
       if (varName) {
         this.addBind(elt, varName);
       }
     }
+  }
+
+  addBind(elt, varName) {
+    elt.bKeyupEvent = function(event) {
+      this.scope[this.name] = this.b.getBindValue(this.elt);
+    }.bind({
+      b: this,
+      name: varName,
+      elt: elt,
+      scope: this.scope,
+    });
+    elt.addEventListener('keyup', elt.bKeyupEvent);
+    elt.bKeyupEvent();
   }
 
   getBindValue(elt) {
@@ -100,41 +226,6 @@ class Bjs {
         return elt.innerText
       }
     }
-  }
-
-  setBoundValues(name) {
-    const value = this.scope[name];
-    const selector = `* [bval="${name}"]`;
-    for (let elt of this.doc.querySelectorAll(selector)) {
-      if (elt.type) {
-        elt.value = value;
-      } else {
-        elt.innerText = value;
-      }
-    }
-  }
-
-  valueChangedEvent(name, old, value) {
-    this.scope[name] = value;
-    (this.watchers[name] || []).forEach(watcher => watcher(value, old));
-    this.setBoundValues(name);
-  }
-
-  addBind(elt, varName) {
-    elt.bKeyupEvent = function(event) {
-      const old = this.scope[this.name];
-      const value = this.b.getBindValue(this.elt);
-      if (old != value) {
-        this.b.valueChangedEvent(this.name, old, value);
-      }
-    }.bind({
-      b: this,
-      name: varName,
-      elt: elt,
-      scope: this.scope,
-    });
-    elt.addEventListener('keyup', elt.bKeyupEvent);
-    elt.bKeyupEvent();
   }
 }
 

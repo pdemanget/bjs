@@ -8,12 +8,28 @@ html(lang="en")
     noscript Javascript not started
     h1= htmlWebpackPlugin.options.title
     form
-      label(for="firstname") Your firstname:
-      input(id="firstname" bbind="firstname" placeholder="Type here")
+      label(for="country") Your country:
+      input(id="country" bbind="country" placeholder="Type here, ends with +", title="Ends with + to add")
     h2
-      | Your firstname is 
-      span(bval="firstname")
+      | Your country is 
+      span(bval="country")
+    div(bval="countries")
+    ul(bif="countries")
+      li.country(bfor="countries")
+        span(bval="$index")
+        | . 
+        span(bval="$value")
     script.
       document.addEventListener('bready', (event) => {
-        event.detail.watchers.firstname.push((value, old) => console.log(`firstname: ${old} -> ${value}`)); 
+        const b = event.detail;
+        b.watchers.country.push((value, old) => console.log(`country: ${old} -> ${value}`)); 
+        b.watchers.country.push(value => {
+          if (value.match(/^.+\+$/)) {
+            const country = value.substring(0, value.length - 1);
+            // TODO b.scope.countries.push(country);
+            b.scope.countries = [...b.scope.countries, country];
+            b.scope.country = '';
+          }
+        }); 
+        b.scope.countries = [];
       });
