@@ -7,18 +7,24 @@ html(lang="en")
   body
     noscript Javascript not started
     h1= htmlWebpackPlugin.options.title
-    form
+    form(onsubmit="return false")
       label(for="country") Your country:
-      input(id="country" bbind="country" placeholder="Type here, ends with +", title="Ends with + to add")
+      input(id="country" bbind="country" placeholder="Type here" title="Ends with + or hit enter to add" onkeyup="addCountry(event)")
     h2
       | Your country is 
       span(bval="country")
-    div(bval="countries")
     ul(bif="countries")
       li.country(bfor="countries")
         span(bval="$index")
         | . 
-        span(bval="$value")
+        span(bval="$value.country")
+        span(style="padding-left: 1rem; cursor: pointer; user-select: none; color: red;" onclick="removeCountry(this.parentNode.querySelector('span').innerText)")
+          | × Remove
+        ul
+          li.zone(bfor="$value.zones")
+            span(bval="$value")
+            |  of 
+            span(bval="$super.$value.country")
     script.
       document.addEventListener('bready', (event) => {
         const b = event.detail;
@@ -26,10 +32,28 @@ html(lang="en")
         b.watchers.country.push(value => {
           if (value.match(/^.+\+$/)) {
             const country = value.substring(0, value.length - 1);
-            // TODO b.scope.countries.push(country);
-            b.scope.countries = [...b.scope.countries, country];
+            console.log(`country ${country} added`);
+            const countryObj = {
+              country,
+              zones: ['zone1', 'zone2', 'zone3'],
+            };
+            b.scope.countries.push(countryObj);
             b.scope.country = '';
           }
         }); 
         b.scope.countries = [];
+        window.addCountry = function(event) {
+          if (event.key == "Enter" && event.target.value) {
+            const countryObj = {
+              country: event.target.value,
+              zones: ['zone1', 'zone2', 'zone3'],
+            }
+            b.scope.countries.push(countryObj);
+            b.scope.country = '';
+          }
+        }
+        window.removeCountry = function(index) {
+          console.log(`country ${b.scope.countries[index]} removed`);
+          b.scope.countries.splice(index, 1);
+        };
       });

@@ -17,6 +17,9 @@ module.exports = {
       inject: false,
     }),
   ],
+  optimization: {
+    minimize: false,
+  },
   module: {
     rules: [
       {

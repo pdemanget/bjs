@@ -1,3 +1,15 @@
+import {
+  createProxy,
+  setObjectPropValue,
+  deleteObjectProp,
+  isProxyAttr,
+} from "./proxy.js";
+import {
+  getValueFromExpr,
+} from "./expr.js";
+
+const superAttr = "$super";
+
 /*
  * BJS framework
  */
@@ -16,7 +28,7 @@ class Bjs {
     this.doc = doc;
     this.scope = this.createScope();
     this.watchers = this.createWatchers();
-    this.$conditions = ['bif', 'bfor'];
+    this.$directives = ['bif', 'bfor'];
     this.$templates = this.createTemplates();
     this.evaluateTemplates();
     this.findBinds();
@@ -24,98 +36,100 @@ class Bjs {
     this.doc.dispatchEvent(bReadyEvent);
   }
 
-  createProxy(obj, overrides) {
-    const $obj = obj || {};
-    const handler = Object.assign({
+  createScope(scope, superScope) {
+    const $super = superScope || null;
+    const $scope = scope || {};
+    const $valueChangedEvent = this.valueChangedEvent.bind(this);
+    return createProxy($scope, {
       has(target, prop) {
-        return prop in $obj;
+        return prop in $scope || ($super != null && prop == superAttr) || ($super != null && prop in $super);
       },
       get(target, prop, receiver) {
-        return $obj[prop];
+        if (prop == isProxyAttr) {
+          return true;
+        } else if ($super != null && prop == superAttr) {
+          return $super;
+        } else if ($super != null && !(prop in $scope)) {
+          return $super[prop];
+        } else {
+          return $scope[prop];
+        }
       },
       set(target, prop, value, receiver) {
-        $obj[prop] = value;
-        return true;
+        const old = typeof $scope[prop] == "object" ? Object.assign({}, $scope[prop]) : $scope[prop];
+        const valueChangedEvent = function() {
+          $valueChangedEvent(prop, old, value);
+        }
+        return setObjectPropValue($scope, prop, value, valueChangedEvent);
       },
       deleteProperty(target, prop) {
-        if (prop in $obj) {
-          delete $obj[prop];
+        const old = typeof $scope[prop] == "object" ? Object.assign({}, $scope[prop]) : $scope[prop];
+        const valueChangedEvent = function() {
+          $valueChangedEvent(prop, old);
         }
-        return true;
-      },
-      ownKeys(target) {
-        return Object.keys($obj);
-      },
-    }, overrides || {});
-    return new Proxy({}, handler);
-  }
-
-  createScope() {
-    const $scope = {};
-    const valueChangedEvent = this.valueChangedEvent.bind(this);
-    return this.createProxy($scope, {
-      set(target, prop, value, receiver) {
-        const old = $scope[prop];
-        $scope[prop] = value;
-        if (old != value) {
-          valueChangedEvent(prop, old, value);
-        }
-        return true;
-      },
-      deleteProperty(target, prop) {
-        if (prop in $scope) {
-          const old = $scope[prop];
-          valueChangedEvent(prop, old);
-          delete $scope[prop];
-        }
-        return true;
+        return deleteObjectProp($scope, prop, valueChangedEvent);
       },
     });
   }
 
   createWatchers() {
     const $watchers = {};
-    return this.createProxy($watchers, {
+    return createProxy($watchers, {
       get(target, prop, receiver) {
-        if (!(prop in $watchers)) {
-          $watchers[prop] = [];
+        if (prop == isProxyAttr) {
+          return true;
+        } else {
+          if (!(prop in $watchers)) {
+            $watchers[prop] = [];
+          }
+          return $watchers[prop];
         }
-        return $watchers[prop];
       },
     });
   }
 
   valueChangedEvent(name, old, value) {
-    this.scope[name] = value;
     (this.watchers[name] || []).forEach(watcher => watcher(value, old));
     this.evaluateTemplates();
     this.setBoundValues(name, this.scope, this.doc);
   }
 
+  // https://stackoverflow.com/questions/3561493/is-there-a-regexp-escape-function-in-javascript/3561711#3561711
+  escapeRegex(s) {
+    return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  }
+
+
   setBoundValues(name, scope, rootElt) {
-    const value = scope[name];
-    const selector = `* [bval="${name}"], * [bbind="${name}"]`;
+    const selector = `* [bval^="${name}"], * [bbind^="${name}"]`;
+    const regex = new RegExp(`^${this.escapeRegex(name)}([[.].+)?$`);
     for (let elt of rootElt.querySelectorAll(selector)) {
-      if (elt.type) {
-        elt.value = value;
+      const varExpr = elt.getAttribute('bval') || elt.getAttribute('bbind');
+      if (regex.test(varExpr)) {
+        const value = getValueFromExpr(scope, varExpr);
+        if (elt.type) {
+          elt.value = value === undefined ? '' : value;
+        } else {
+          elt.innerText = value === undefined ? '' : value;
+        }
       } else {
-        elt.innerText = value;
+        throw `${varExpr} is incorrect`;
       }
     }
   }
 
   createTemplates() {
-    const selector = this.$conditions.map(cond => `* [${cond}]`).join(',');
+    const selector = this.$directives.map(directive => `* [${directive}]`).join(',');
     const templates = [];
     for (let elt of [...this.doc.querySelectorAll(selector)].reverse()) {
       const eltCloned = elt.cloneNode(true);
       const template = document.createElement('template');
       template.setAttribute('type', 'bjs');
-      for (let cond of this.$conditions) {
-        if (eltCloned.hasAttribute(cond)) {
-          template.setAttribute('cond', cond);
-          template.setAttribute('var', eltCloned.getAttribute(cond));
-          eltCloned.removeAttribute(cond);
+      for (let directive of this.$directives) {
+        if (eltCloned.hasAttribute(directive)) {
+          template.setAttribute('directive', directive);
+          template.setAttribute('expr', eltCloned.getAttribute(directive));
+          eltCloned.removeAttribute(directive);
           break;
         }
       }
@@ -129,70 +143,70 @@ class Bjs {
 
   evaluateTemplates() {
     for (let template of this.$templates) {
-      this.evaluateTemplate(template);
+      this.evaluateTemplate(template, this.scope);
     }
   }
 
-  evaluateTemplate(template) {
-    const cond = template.getAttribute('cond');
-    const varName = template.getAttribute('var');
-    if (!cond || !varName) {
+  evaluateTemplate(template, scope) {
+    const directive = template.getAttribute('directive');
+    const expr = template.getAttribute('expr');
+    if (!directive || !expr) {
       return;
     }
-    const condCamel = cond[0].toUpperCase() + cond.substring(1);
-    const funcName = `renderTemplate${condCamel}`;
+    const directiveCamel = directive[0].toUpperCase() + directive.substring(1);
+    const funcName = `renderTemplate${directiveCamel}`;
+    // renderTemplateBif and renderTemplateBfor 
     if (funcName in this) {
-      const elements = this[funcName](template.content.firstChild, varName);
+      const results = this[funcName](scope, template.content.firstChild, expr);
       // remove previously inserted elements
       for (let i = 0; i < template.nbElts; i++) {
         template.nextSibling && template.nextSibling.remove();
       }
       template.nbElts = 0;
-      if (elements && elements.length) {
-        for (let element of elements) {
+      if (results && results.length) {
+        for (let result of results) {
+          const [element, localScope] = result;
           // render recursively any sub template of each element
           for (let subTemplate of element.querySelectorAll('template')) {
             if (subTemplate.getAttribute('type') == 'bjs') {
-              this.evaluateTemplate(subTemplate);
+              this.evaluateTemplate(subTemplate, localScope);
             }
           }
         }
-        template.after(...elements);
-        template.nbElts = elements.length;
+        template.after(...results.map(res => res[0]));
+        template.nbElts = results.length;
       }
     } else {
       console.error(`${funcName} is not defined in BJS`);
     }
   }
 
-  renderTemplateBif(element, varName) {
-    const elements = [];
-    const value = this.scope[varName];
+  renderTemplateBif(scope, element, varExpr) {
+    const res = [];
+    const value = getValueFromExpr(scope, varExpr);
     if (value) {
-      elements.push(element.cloneNode(true));
+      res.push([element.cloneNode(true), scope]);
     }
-    return elements;
+    return res;
   }
 
-  renderTemplateBfor(element, varName) {
-    const elements = [];
-    const lst = this.scope[varName];
-    // TODO handle maps and any iterable objects
-    if (lst && lst.length) {
-      for (let i = 0; i < lst.length; i++) {
+  renderTemplateBfor(scope, element, varExpr) {
+    const res = [];
+    const iterable = getValueFromExpr(scope, varExpr);
+    if (iterable && iterable.entries) {
+      for (let entry of iterable.entries()) {
         const oneElt = element.cloneNode(true);
-        // TODO nested of nested of nested ... bfor
-        // introduce $super
-        const localScope = {
-          "$index": i,
-          "$value": lst[i],
-        };
-        this.setBoundValues('$index', localScope, oneElt);
-        this.setBoundValues('$value', localScope, oneElt);
-        elements.push(oneElt);
+        const localScope = this.createScope({
+          "$index": entry[0],
+          "$value": entry[1],
+        }, Object.assign({}, scope));
+        for (let subVarExpr of this.findVarExprs(oneElt)) {
+          this.setBoundValues(subVarExpr, localScope, oneElt);
+        }
+        res.push([oneElt, localScope]);
       }
     }
-    return elements;
+    return res;
   }
 
   findBinds() {
@@ -200,9 +214,21 @@ class Bjs {
     for (let elt of this.doc.querySelectorAll(selector)) {
       const varName = elt.getAttribute('bbind').trim()
       if (varName) {
+        if (varName.indexOf('.') != -1 || varName.indexOf('[') != -1) {
+          throw `${varName} expression is forbidden in bbind, you can only use raw variable name`;
+        }
         this.addBind(elt, varName);
       }
     }
+  }
+
+  findVarExprs(rootElt) {
+    const varExprs = [];
+    const selector = `* [bval], * [bbind]`;
+    for (let elt of rootElt.querySelectorAll(selector)) {
+      varExprs.push(elt.getAttribute('bval') || elt.getAttribute('bbind'));
+    }
+    return Array.from(new Set(varExprs));
   }
 
   addBind(elt, varName) {
