@@ -280,8 +280,12 @@ class Bjs {
 
 const b = new Bjs();
 // document is not defined in nodejs
-if (document) {
-  document.addEventListener('DOMContentLoaded', () => b.init(document));
+try {
+  if (document) {
+    document.addEventListener('DOMContentLoaded', () => b.init(document));
+  }
+} catch (e) {
+  // nodejs
 }
 
 export default b;

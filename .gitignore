@@ -1,5 +1,7 @@
-dist/
 node_modules/
+dist/
+coverage/
 .project
 .settings/
 .idea/
+test-report.html
