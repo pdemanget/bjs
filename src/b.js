@@ -7,8 +7,16 @@ import {
 import {
   getValueFromExpr,
 } from "./expr.js";
+import {
+  addFilter,
+  upperFilter,
+  lowerFilter,
+  capitalizeFilter,
+  trimFilter,
+} from "./filters.js";
 
 const superAttr = "$super";
+const bInstAttr = "$b";
 
 /*
  * BJS framework
@@ -28,8 +36,15 @@ class Bjs {
     this.doc = doc;
     this.scope = this.createScope();
     this.watchers = this.createWatchers();
-    this.$directives = ['bif', 'bfor'];
-    this.$templates = this.createTemplates();
+    this.filters = new Map([
+      ['add', addFilter],
+      ['upper', upperFilter],
+      ['lower', lowerFilter],
+      ['capitalize', capitalizeFilter],
+      ['trim', trimFilter],
+    ]);
+    this._directives = ['bif', 'bfor'];
+    this._templates = this.createTemplates();
     this.evaluateTemplates();
     this.findBinds();
     const bReadyEvent = new CustomEvent('bready', { detail: this });
@@ -38,15 +53,23 @@ class Bjs {
 
   createScope(scope, superScope) {
     const $super = superScope || null;
+    const $bInstance = this;
     const $scope = scope || {};
     const $valueChangedEvent = this.valueChangedEvent.bind(this);
     return createProxy($scope, {
       has(target, prop) {
-        return prop in $scope || ($super != null && prop == superAttr) || ($super != null && prop in $super);
+        return (
+          prop in $scope
+          || prop == bInstAttr
+          || ($super != null && prop == superAttr)
+          || ($super != null && prop in $super)
+        );
       },
       get(target, prop, receiver) {
         if (prop == isProxyAttr) {
           return true;
+        } else if (prop == bInstAttr) {
+          return $bInstance;
         } else if ($super != null && prop == superAttr) {
           return $super;
         } else if ($super != null && !(prop in $scope)) {
@@ -119,13 +142,13 @@ class Bjs {
   }
 
   createTemplates() {
-    const selector = this.$directives.map(directive => `* [${directive}]`).join(',');
+    const selector = this._directives.map(directive => `* [${directive}]`).join(',');
     const templates = [];
     for (let elt of [...this.doc.querySelectorAll(selector)].reverse()) {
       const eltCloned = elt.cloneNode(true);
       const template = document.createElement('template');
       template.setAttribute('type', 'bjs');
-      for (let directive of this.$directives) {
+      for (let directive of this._directives) {
         if (eltCloned.hasAttribute(directive)) {
           template.setAttribute('directive', directive);
           template.setAttribute('expr', eltCloned.getAttribute(directive));
@@ -142,7 +165,7 @@ class Bjs {
   }
 
   evaluateTemplates() {
-    for (let template of this.$templates) {
+    for (let template of this._templates) {
       this.evaluateTemplate(template, this.scope);
     }
   }
@@ -199,7 +222,7 @@ class Bjs {
         const localScope = this.createScope({
           "$index": entry[0],
           "$value": entry[1],
-        }, Object.assign({}, scope));
+        }, scope);
         for (let subVarExpr of this.findVarExprs(oneElt)) {
           this.setBoundValues(subVarExpr, localScope, oneElt);
         }

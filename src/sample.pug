@@ -23,8 +23,8 @@ html(lang="en")
         ul
           li.zone(bfor="$value.zones")
             span(bval="$value")
-            |  of 
-            span(bval="$super.$value.country")
+            |  − test literal and filter: 
+            span(bval="$super.$value.country|add:': it%qs a tyranny!'|capitalize")
     script.
       document.addEventListener('bready', (event) => {
         const b = event.detail;
