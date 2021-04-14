@@ -8,7 +8,7 @@
  *   STRING := STRING_QUOTE | STRING_DBQUOTE
  *   STRING_QUOTE := "'" [^']* "'"
  *   STRING_DBQUOTE := "\"" [^"]* "\""
- *   NUMBER := [0-9]+ [ DECIMAL_PART ]
+ *   NUMBER := -?[0-9]+ [ DECIMAL_PART ]
  *   DECIMAL_PART := "." [0-9]+
  *   BOOLEAN := "true" | "false"
  *   VAR_EXPRESSION := ID [SUBSCOPE]
@@ -28,7 +28,7 @@
  *   STRING := STRING_QUOTE | STRING_DBQUOTE
  *   STRING_QUOTE := "'" [^']* "'"
  *   STRING_DBQUOTE := '"' [^"]* '"'
- *   NUMBER := [0-9]+(?:\.[0-9]+)
+ *   NUMBER := -?[0-9]+(?:\.[0-9]+)?
  *   BOOLEAN := "true" | "false"
  *   VAR_EXPRESSION := ID SUBSCOPE
  *   ID := [$_A-Za-z][$_A-Za-z0-9]*
@@ -51,7 +51,7 @@ export function getValueFromExpr(scope, expr) {
       rest,
     } = parseExpression(rootScope, scope, '', expr);
     if (rest) {
-      throw `unexpected token ${rest}, expected end of expression`;
+      throw `unexpected token "${rest}", expected end of expression`;
     }
     return nextScope;
   } catch (e) {
@@ -62,13 +62,13 @@ export function getValueFromExpr(scope, expr) {
 
 const DOT = '.';
 const OSB = '[';
-const CSB = '[';
+const CSB = ']';
 const PIPE = '|';
 const COLON = ':';
 const idRegex = new RegExp(/^([$_A-Za-z][$_A-Za-z0-9]*)(.*)/);
 const stringQuoteRegex = new RegExp(/^'([^']*)'(.*)/);
 const stringDbQuoteRegex = new RegExp(/^"([^"]*)"(.*)/);
-const numberRegex = new RegExp(/^([0-9]+(?:\.[0-9]+))(.*)/);
+const numberRegex = new RegExp(/^(-?[0-9]+(?:\.[0-9]+)?)(.*)/);
 const booleanRegex = new RegExp(/(true|false)(.*)/);
 
 function parseExpression(rootScope, scope, evaluatedExpr, expr) {
@@ -125,7 +125,7 @@ function parseFilterId(rootScope, scope, evaluatedExpr, expr) {
       rest,
     };
   } else {
-    throw `filter expected at ${evaluatedExpr}, ${expr} given`;
+    throw `filter expected at "${evaluatedExpr}"`;
   }
 }
 
@@ -149,7 +149,7 @@ function parseSimpleExpression(rootScope, scope, evaluatedExpr, expr) {
       return literalResult;
     }
   } else {
-    throw `expression expected at ${evaluatedExpr}, ${expr} given`;
+    throw `expression expected at "${evaluatedExpr}"`;
   }
 }
 
@@ -230,7 +230,7 @@ function parseId(rootScope, scope, evaluatedExpr, expr) {
     const id = m[1];
     const rest = m[2];
     if (!(id in scope)) {
-      throw `identifier "${id}" does not exist in scope ${evaluatedExpr}`;
+      throw `identifier "${id}" does not exist in scope "${evaluatedExpr || '<root>'}"`;
     }
     const nextScope = scope[id];
     const nextEvaluatedExpr = `${evaluatedExpr}${id}`;
@@ -240,7 +240,7 @@ function parseId(rootScope, scope, evaluatedExpr, expr) {
       rest,
     };
   } else {
-    throw `identifier expected at ${evaluatedExpr}, ${expr} given`;
+    throw `identifier expected at "${evaluatedExpr}", "${expr}" given`;
   }
 }
 
@@ -270,12 +270,12 @@ function parseSquareExpr(rootScope, scope, evaluatedExpr, expr) {
   const subEvaluatedExpr = subExprResult.nextEvaluatedExpr;
   nextEvaluatedExpr += subEvaluatedExpr;
   if (!subExprResult.rest || subExprResult.rest[0] != CSB) {
-    throw `${CSB} expected at ${nextEvaluatedExpr}, "${subExprResult.rest}" given`;
+    throw `${CSB} expected at "${nextEvaluatedExpr}", "${subExprResult.rest}" given`;
   }
   const rest = subExprResult.rest.substring(1);
   nextEvaluatedExpr += CSB;
   if (!(subExprResult.nextScope in scope)) {
-    throw `map arg "${subExprResult.nextScope}" (${subEvaluatedExpr}) does not exist in scope ${evaluatedExpr}`;
+    throw `map arg "${subExprResult.nextScope}" (${subEvaluatedExpr}) does not exist in scope "${evaluatedExpr || '<root>'}"`;
   }
   const nextScope = scope[subExprResult.nextScope];
   return parseSubScope(rootScope, nextScope, nextEvaluatedExpr, rest);

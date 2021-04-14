@@ -2,12 +2,13 @@ export function addFilter(obj, arg) {
   return obj + arg;
 }
 export function upperFilter(obj) {
-  return obj.toUpperCase();
+  return ('' + obj).toUpperCase();
 }
 export function lowerFilter(obj) {
-  return obj.toLowerCase();
+  return ('' + obj).toLowerCase();
 }
 export function capitalizeFilter(obj) {
+  obj = '' + obj;
   if (obj.length >= 2) {
     return obj[0].toUpperCase() + obj.substring(1).toLowerCase();
   } else {
@@ -15,5 +16,5 @@ export function capitalizeFilter(obj) {
   }
 }
 export function trimFilter(obj) {
-  return obj.trim();
+  return ('' + obj).trim();
 }
