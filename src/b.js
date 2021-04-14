@@ -16,19 +16,13 @@ import {
 } from "./filters.js";
 
 const superAttr = "$super";
-const bInstAttr = "$b";
+const instAttr = "$b";
 
 /*
  * BJS framework
  */
 class Bjs {
-  extend(o) {
-    for (k in o) {
-      this[k] = o[k];
-    }
-  }
-
-  init(doc) {
+  constructor(doc) {
     if (!doc) {
       // try document
       doc = document;
@@ -51,7 +45,17 @@ class Bjs {
     this.doc.dispatchEvent(bReadyEvent);
   }
 
+  get superAttr() {
+    return superAttr;
+  }
+
+  get instAttr() {
+    return instAttr;
+  }
+
   createScope(scope, superScope) {
+    const $superAttr = this.superAttr;
+    const $instAttr = this.instAttr;
     const $super = superScope || null;
     const $bInstance = this;
     const $scope = scope || {};
@@ -60,17 +64,17 @@ class Bjs {
       has(target, prop) {
         return (
           prop in $scope
-          || prop == bInstAttr
-          || ($super != null && prop == superAttr)
+          || prop == $instAttr
+          || ($super != null && prop == $superAttr)
           || ($super != null && prop in $super)
         );
       },
       get(target, prop, receiver) {
         if (prop == isProxyAttr) {
           return true;
-        } else if (prop == bInstAttr) {
+        } else if (prop == $instAttr) {
           return $bInstance;
-        } else if ($super != null && prop == superAttr) {
+        } else if ($super != null && prop == $superAttr) {
           return $super;
         } else if ($super != null && !(prop in $scope)) {
           return $super[prop];
@@ -117,9 +121,9 @@ class Bjs {
     this.setBoundValues(name, this.scope, this.doc);
   }
 
-  // https://stackoverflow.com/questions/3561493/is-there-a-regexp-escape-function-in-javascript/3561711#3561711
   escapeRegex(s) {
-    return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    // https://stackoverflow.com/questions/3561493/is-there-a-regexp-escape-function-in-javascript/3561711#3561711
+    return s.replace(/[\/\\^$*+?.()|[\]{}]/g, '\\$&');
   }
 
 
@@ -235,7 +239,7 @@ class Bjs {
   findBinds() {
     const selector = '* [bbind]';
     for (let elt of this.doc.querySelectorAll(selector)) {
-      const varName = elt.getAttribute('bbind').trim()
+      const varName = elt.getAttribute('bbind')
       if (varName) {
         if (varName.indexOf('.') != -1 || varName.indexOf('[') != -1) {
           throw `${varName} expression is forbidden in bbind, you can only use raw variable name`;
@@ -247,11 +251,14 @@ class Bjs {
 
   findVarExprs(rootElt) {
     const varExprs = [];
-    const selector = `* [bval], * [bbind]`;
+    const selector = '* [bval], * [bbind]';
     for (let elt of rootElt.querySelectorAll(selector)) {
-      varExprs.push(elt.getAttribute('bval') || elt.getAttribute('bbind'));
+      const varExpr = elt.getAttribute('bval') || elt.getAttribute('bbind');
+      if (varExpr && !varExprs.includes(varExpr)) {
+        varExprs.push(varExpr);
+      }
     }
-    return Array.from(new Set(varExprs));
+    return varExprs;
   }
 
   addBind(elt, varName) {
@@ -278,14 +285,13 @@ class Bjs {
   }
 }
 
-const b = new Bjs();
-// document is not defined in nodejs
 try {
+  // document is not defined in nodejs
   if (document) {
-    document.addEventListener('DOMContentLoaded', () => b.init(document));
+    document.addEventListener('DOMContentLoaded', () => new Bjs(document));
   }
 } catch (e) {
   // nodejs
 }
 
-export default b;
+export default Bjs;

@@ -26,7 +26,6 @@
       "<rootDir>/tests/"
     ],
     "testEnvironment": "jsdom",
-    "//": "pass --coverage to test script to collect coverage",
     "injectGlobals": false,
     "clearMocks": true,
     "reporters": [
@@ -35,6 +34,7 @@
         "pageTitle": "BJS Test Report"
       }]
     ],
+    "//": "pass --coverage to test script to collect coverage",
     "collectCoverage": false,
     "collectCoverageFrom": [
       "<rootDir>/src/*.js"
