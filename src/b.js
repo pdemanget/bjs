@@ -116,7 +116,7 @@ class Bjs {
   }
 
   valueChangedEvent(name, old, value) {
-    (this.watchers[name] || []).forEach(watcher => watcher(value, old));
+    this.watchers[name].forEach(watcher => watcher(value, old));
     this.evaluateTemplates();
     this.setBoundValues(name, this.scope, this.doc);
   }
@@ -129,7 +129,7 @@ class Bjs {
 
   setBoundValues(name, scope, rootElt) {
     const selector = `* [bval^="${name}"], * [bbind^="${name}"]`;
-    const regex = new RegExp(`^${this.escapeRegex(name)}([[.].+)?$`);
+    const regex = new RegExp(`^${this.escapeRegex(name)}([[.|].+)?$`);
     for (let elt of rootElt.querySelectorAll(selector)) {
       const varExpr = elt.getAttribute('bval') || elt.getAttribute('bbind');
       if (regex.test(varExpr)) {
@@ -139,18 +139,16 @@ class Bjs {
         } else {
           elt.innerText = value === undefined ? '' : value;
         }
-      } else {
-        throw `${varExpr} is incorrect`;
       }
     }
   }
 
   createTemplates() {
-    const selector = this._directives.map(directive => `* [${directive}]`).join(',');
+    const selector = this._directives.map(directive => `* [${directive}]`).join(', ');
     const templates = [];
     for (let elt of [...this.doc.querySelectorAll(selector)].reverse()) {
       const eltCloned = elt.cloneNode(true);
-      const template = document.createElement('template');
+      const template = this.doc.createElement('template');
       template.setAttribute('type', 'bjs');
       for (let directive of this._directives) {
         if (eltCloned.hasAttribute(directive)) {
