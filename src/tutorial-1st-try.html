@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>BJS 1st launch</title><script src="/b.min.js"></script>
+  </head>
+  <body bload>
+    <noscript>Javascript not started</noscript>
+    <h1>BJS 1st launch</h1>
+    <form onsubmit="return false">
+      <label for="name">Your name:</label>
+      <input id="name" bbind="name" placeholder="name">
+    </form>
+    <h2>Your name is <span bval="name"></span></h2>
+
+    <script>
+      document.addEventListener('bready', (event) => {
+      // Get BJS instance in JS
+        const b = event.detail;
+        b.scope.name = "Bill";
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,77 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="utf-8")
+    title= htmlWebpackPlugin.options.title
+    != htmlWebpackPlugin.tags.headTags
+  body(bload)
+    noscript Javascript not started
+    h1= htmlWebpackPlugin.options.title
+    form(onsubmit="return false")
+      label(for="msg") Your country:
+      input(id="msg" bbind="msg" placeholder="Type here" title="hit enter to add" onkeyup="add(event)")
+    h2
+      | Current TODO 
+      span(bval="msg")
+    table(bif="todoList")
+      tr
+        th index
+        th id
+        th msg
+        th( style="padding-left: 1rem; cursor: pointer; user-select: none; color: red;" onclick="new()" ) New
+      tr(bfor="todoList")
+        td(bval="$index")
+        td(bval="$value.id")
+        td(bval="$value.msg")
+        td(style="padding-left: 1rem; cursor: pointer; user-select: none; color: red;" onclick="remove(this.parentNode.querySelector('td').innerText)")
+          | × Remove
+            
+            
+    script.
+      
+      
+      function breadyDispatch(b){
+        //initiate a scop with a todoList and a current todo
+        todoSequence=1;
+        
+        b.scope.todoList = [];
+        window.add = function(event) {
+          if (event.key == "Enter" && event.target.value) {
+            const todo = {
+              id:todoSequence++,
+              msg: event.target.value,
+            }
+            b.scope.todoList.push(todo);
+            b.scope.msg = '';
+            
+            https://stackoverflow.com/questions/5129386/how-to-detect-when-history-pushstate-and-history-replacestate-are-used
+            
+            
+            window.history.pushState({"page":"new " +todo.id}, "todo "+todo.id, "/starting.html/"+todo.id)
+            
+            window.onpopstate = function (event) {
+              if (event.state) {
+                 console.log(event.state)
+                // history changed because of pushState/replaceState
+              } else {
+                console.log("page load"+event)
+                // history changed because of a page load
+              }
+            }
+            
+          }
+        }
+        window.remove = function(index) {
+          b.scope.todoList.splice(index, 1);
+        };
+        
+        window.new = function(){
+           window.history.pushState({"page":"new"}, "todo new", "/starting.html/new")
+        }
+      }
+      
+      // on bjs startup the bready event is triggered
+      document.addEventListener('bready', (event) => {
+        const b = event.detail;
+        breadyDispatch(b);
+      });

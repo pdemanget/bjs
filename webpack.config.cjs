@@ -42,6 +42,13 @@ module.exports = {
       minify: false,
       chunks: ['b.min'],
     }),
+    new HtmlWebpackPlugin({
+      template: './src/tutorial-router.pug',
+      filename: 'tutorial-router.html',
+      title: 'Getting started on router',
+      minify: false,
+      inject: false,
+    }),
   ],
   devtool: "source-map",
   devServer: {
