@@ -365,17 +365,198 @@ test("Bjs evaluateTemplates", () => {
 
 test("Bjs evaluateTemplate", () => {
   const b = instBjs();
-  // TODO
+  const scope = { attr: 'val0' };
+  global.console.error = jest.fn();
+  const templateContent = {};
+  const subTemplateContent = {};
+  const template = {
+    getAttribute: jest.fn(arg => {
+      if (arg == 'type') {
+        return 'bjs';
+      } else if (arg == 'directive') {
+        return 'bfor';
+      } else if (arg == 'expr') {
+        return 'countries';
+      }
+    }),
+    content: {
+      firstChild: templateContent,
+    },
+    nbElts: 4,
+    nextSibling: {
+      remove: jest.fn(),
+    },
+    after: jest.fn(),
+  };
+  const bforSubTemplates = [
+    {
+      getAttribute: jest.fn(arg => undefined),
+    },
+    {
+      getAttribute: jest.fn(arg => {
+        if (arg == 'type') {
+          return 'bjs';
+        } else if (arg == 'directive') {
+          return 'bif';
+        } else if (arg == 'expr') {
+          return 'toto';
+        }
+      }),
+      content: {
+        firstChild: subTemplateContent,
+      },
+      nbElts: 1,
+      nextSibling: {
+        remove: jest.fn(),
+      },
+      after: jest.fn(),
+    },
+    {
+      getAttribute: jest.fn(arg => {
+        if (arg == 'type') {
+          return 'bjs';
+        } else if (arg == 'directive') {
+          return 'bb';
+        } else if (arg == 'expr') {
+          return 'whatever';
+        }
+      }),
+      content: {
+        firstChild: {},
+      },
+      nextSibling: {
+        remove: jest.fn(),
+      },
+      after: jest.fn(),
+    },
+  ];
+  const bforElements = [
+    {
+      querySelectorAll: jest.fn().mockReturnValue([]),
+    },
+    {
+      querySelectorAll: jest.fn().mockReturnValue(bforSubTemplates),
+    },
+  ];
+  const bforScopes = [
+    { attr: 'val1' },
+    { attr: 'val2' },
+  ];
+  b.renderTemplateBfor = jest.fn((scope, element, varExpr) => {
+    const res = [];
+    for (let i = 0; i < bforElements.length; i++) {
+      res.push([bforElements[i], bforScopes[i]]);
+    }
+    return res;
+  });
+  const bifElements = [{
+    querySelectorAll: jest.fn().mockReturnValue([]),
+  }];
+  const bifScopes = [bforScopes[1]];
+  b.renderTemplateBif = jest.fn((scope, element, varExpr) => [
+    [bifElements[0], bifScopes[0]],
+  ]);
+  b.evaluateTemplate(template, scope);
+  expect(template.getAttribute).toHaveBeenCalledWith('directive');
+  expect(template.getAttribute).toHaveBeenCalledWith('expr');
+  expect(b.renderTemplateBfor).toHaveBeenCalledWith(scope, templateContent, 'countries');
+  expect(template.nextSibling.remove).toHaveBeenCalledTimes(4);
+  expect(template.nbElts).toEqual(2);
+  expect(template.after).toHaveBeenCalledTimes(1);
+  expect(template.after).toHaveBeenCalledWith(...bforElements);
+  expect(bforElements[0].querySelectorAll).toHaveBeenCalledWith('template');
+  expect(bforElements[1].querySelectorAll).toHaveBeenCalledWith('template');
+  expect(bforSubTemplates[0].getAttribute).toHaveBeenCalledWith('type');
+  expect(bforSubTemplates[0].getAttribute).not.toHaveBeenCalledWith('directive');
+  expect(bforSubTemplates[0].getAttribute).not.toHaveBeenCalledWith('expr');
+  expect(bforSubTemplates[1].getAttribute).toHaveBeenCalledWith('type');
+  expect(bforSubTemplates[1].getAttribute).toHaveBeenCalledWith('directive');
+  expect(bforSubTemplates[1].getAttribute).toHaveBeenCalledWith('expr');
+  expect(bforSubTemplates[2].getAttribute).toHaveBeenCalledWith('type');
+  expect(bforSubTemplates[2].getAttribute).toHaveBeenCalledWith('directive');
+  expect(bforSubTemplates[2].getAttribute).toHaveBeenCalledWith('expr');
+  expect(b.renderTemplateBif).toHaveBeenCalledWith(bforScopes[1], templateContent, 'toto');
+  expect(bforSubTemplates[1].nextSibling.remove).toHaveBeenCalledTimes(1);
+  expect(bforSubTemplates[1].nbElts).toEqual(1);;
+  expect(bforSubTemplates[1].after).toHaveBeenCalledTimes(1);
+  expect(bforSubTemplates[1].after).toHaveBeenCalledWith(...bifElements);
+  expect(bforSubTemplates[2].nextSibling.remove).not.toHaveBeenCalled();
+  expect(bforSubTemplates[2].nbElts).toBeUndefined();
+  expect(bforSubTemplates[2].after).not.toHaveBeenCalled();
+  expect(console.error).toHaveBeenCalledWith("renderTemplateBb is not defined in BJS");
 });
 
 test("Bjs renderTemplateBif", () => {
   const b = instBjs();
-  // TODO
+  let scope = { 'toto': false };
+  let element = { cloneNode: jest.fn().mockReturnThis() };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
+  element.cloneNode.mockClear();
+  scope = { 'toto': 0 };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
+  element.cloneNode.mockClear();
+  scope = { 'toto': '' };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
+  element.cloneNode.mockClear();
+  scope = { 'toto': null };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
+  element.cloneNode.mockClear();
+  scope = { 'toto': 0/0 };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
+  element.cloneNode.mockClear();
+  scope = {};
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
+  element.cloneNode.mockClear();
+  scope = { 'toto': 'false' };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([[element, scope]]);
+  expect(element.cloneNode).toHaveBeenCalledWith(true);
 });
 
 test("Bjs renderTemplateBfor", () => {
   const b = instBjs();
-  // TODO
+  let scope = {};
+  let element = { cloneNode: jest.fn().mockReturnThis() };
+  b.createScope = (scope, superScope) => ({...scope, [b.superAttr]: superScope});
+  b.findVarExprs = jest.fn().mockReturnValue([]);
+  b.setBoundValues = jest.fn();
+  expect(b.renderTemplateBfor(scope, element, 'lst')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
+  expect(b.findVarExprs).not.toHaveBeenCalled();
+  expect(b.setBoundValues).not.toHaveBeenCalled();
+  element.cloneNode.mockClear();
+  b.findVarExprs.mockClear();
+  b.setBoundValues.mockClear();
+  scope = {'lst': new Map([['k1', 'v1'], ['k2', 'v2']])};
+  b.findVarExprs.mockReturnValue(['$index', '$value']);
+  const localScope1 = {
+    '$index': 'k1',
+    '$value': 'v1',
+    [b.superAttr]: scope,
+  };
+  const localScope2 = {
+    '$index': 'k2',
+    '$value': 'v2',
+    [b.superAttr]: scope,
+  };
+  expect(b.renderTemplateBfor(scope, element, 'lst')).toEqual([
+    [element, localScope1],
+    [element, localScope2],
+  ]);
+  expect(element.cloneNode).toHaveBeenCalledTimes(2);
+  expect(element.cloneNode).toHaveBeenCalledWith(true);
+  expect(b.findVarExprs).toHaveBeenCalledTimes(2);
+  expect(b.findVarExprs).toHaveBeenCalledWith(element);
+  expect(b.setBoundValues).toHaveBeenCalledTimes(4);
+  expect(b.setBoundValues).toHaveBeenCalledWith('$index', localScope1, element);
+  expect(b.setBoundValues).toHaveBeenCalledWith('$value', localScope1, element);
+  expect(b.setBoundValues).toHaveBeenCalledWith('$index', localScope2, element);
+  expect(b.setBoundValues).toHaveBeenCalledWith('$value', localScope2, element);
 });
 
 test("Bjs findBinds", () => {
