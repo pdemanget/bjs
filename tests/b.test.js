@@ -64,10 +64,14 @@ test("Bjs constructor", () => {
     'capitalize',
     'trim',
   ]);
+  expect(b.doc.dispatchEvent).toHaveBeenCalledTimes(2);
   expect(b.doc.dispatchEvent).toHaveBeenCalledWith(expect.any(CustomEvent));
-  const triggeredEvent = b.doc.dispatchEvent.mock.calls[0][0];
-  expect(triggeredEvent.typeArg).toEqual('bready');
-  expect(triggeredEvent.detail).toBe(b);
+  const triggeredBPluginEvent = b.doc.dispatchEvent.mock.calls[0][0];
+  const triggeredBReadyEvent = b.doc.dispatchEvent.mock.calls[1][0];
+  expect(triggeredBPluginEvent.typeArg).toEqual('bplugin');
+  expect(triggeredBPluginEvent.detail).toBe(b);
+  expect(triggeredBReadyEvent.typeArg).toEqual('bready');
+  expect(triggeredBReadyEvent.detail).toBe(b);
 });
 
 test("Bjs createScope", () => {

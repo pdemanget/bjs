@@ -38,6 +38,9 @@ class Bjs {
       ['trim', trimFilter],
     ]);
     this._directives = ['bif', 'bfor'];
+    // fill in filters & templates
+    const bPluginEvent = new CustomEvent('bplugin', { detail: this });
+    this.doc.dispatchEvent(bPluginEvent);
     this._templates = this.createTemplates();
     this.evaluateTemplates();
     this.findBinds();
