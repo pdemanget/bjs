@@ -1,12 +1,16 @@
 import {jest, test, expect, beforeEach, afterEach} from '@jest/globals';
 import {
   getValueFromExpr,
+  ValueException,
 } from "../src/expr.js";
+import {
+  INST_ATTR,
+  SUPER_ATTR,
+} from "../src/scope_common.js";
 
 let scope;
 
 beforeEach(() => {
-  global.console.debug = jest.fn();
   scope = {
     toto: {
       titi: "tutu",
@@ -50,18 +54,15 @@ test("boolean literal expression", () => {
 test("simple var expression", () => {
   let value = getValueFromExpr(scope, "tata");
   expect(value).toEqual("tete");
-  console.debug.mockClear();
-  value = getValueFromExpr(scope, "titi");
-  expect(value).toBeUndefined();
-  expect(console.debug).toHaveBeenCalledWith('identifier "titi" does not exist in scope "<root>"');
-  console.debug.mockClear();
-  value = getValueFromExpr(scope, "%test");
-  expect(value).toBeUndefined();
-  expect(console.debug).toHaveBeenCalledWith('identifier expected at "", "%test" given');
-  console.debug.mockClear();
-  value = getValueFromExpr(scope, "");
-  expect(value).toBeUndefined();
-  expect(console.debug).toHaveBeenCalledWith('expression expected at ""');
+  expect(() => {
+    getValueFromExpr(scope, "titi");
+  }).toThrow(new ValueException('identifier "titi" does not exist in scope "<root>"'));
+  expect(() => {
+    getValueFromExpr(scope, "%test");
+  }).toThrow(new ValueException('identifier expected at "", "%test" given'));
+  expect(() => {
+    getValueFromExpr(scope, "");
+  }).toThrow(new ValueException('expression expected at ""'));
 });
 
 test("dot var expression", () => {
@@ -69,10 +70,9 @@ test("dot var expression", () => {
   expect(value).toEqual("tutu");
   value = getValueFromExpr(scope, "toto.foo");
   expect(value).toEqual({ bar: "baz" });
-  console.debug.mockClear();
-  value = getValueFromExpr(scope, "toto.test");
-  expect(value).toBeUndefined();
-  expect(console.debug).toHaveBeenCalledWith('identifier "test" does not exist in scope "toto."');
+  expect(() => {
+    value = getValueFromExpr(scope, "toto.test");
+  }).toThrow(new ValueException('identifier "test" does not exist in scope "toto."'));
   value = getValueFromExpr(scope, "toto.foo.bar");
   expect(value).toEqual("baz");
 });
@@ -80,14 +80,12 @@ test("dot var expression", () => {
 test("square var expression", () => {
   let value = getValueFromExpr(scope, "toto['titi']");
   expect(value).toEqual("tutu");
-  console.debug.mockClear();
-  value = getValueFromExpr(scope, "toto['titi'");
-  expect(value).toBeUndefined();
-  expect(console.debug).toHaveBeenCalledWith(`] expected at "toto['titi'", "" given`);
-  console.debug.mockClear();
-  value = getValueFromExpr(scope, "toto[tata]");
-  expect(value).toBeUndefined();
-  expect(console.debug).toHaveBeenCalledWith(`map arg "tete" (tata) does not exist in scope "toto"`);
+  expect(() => {
+    value = getValueFromExpr(scope, "toto['titi'");
+  }).toThrow(new ValueException(`] expected at "toto['titi'", "" given`));
+  expect(() => {
+    value = getValueFromExpr(scope, "toto[tata]");
+  }).toThrow(new ValueException(`map arg "tete" (tata) does not exist in scope "toto"`));
 });
 
 test("filter expression", () => {
@@ -98,30 +96,25 @@ test("filter expression", () => {
     extract,
   }));
   const rootScope = {
-    "$b": { filters },
+    [INST_ATTR]: { filters },
   };
-  scope.$super = rootScope;
+  scope[SUPER_ATTR] = rootScope;
   let value = getValueFromExpr(scope, "tata|upper");
   expect(value).toEqual("TETE");
   value = getValueFromExpr(scope, "tata|upper|extract:2");
   expect(value).toEqual("T");
-  console.debug.mockClear();
   value = getValueFromExpr(scope, "tata|upper|extract:4");
   expect(value).toBeUndefined();
-  expect(console.debug).not.toHaveBeenCalled();
-  console.debug.mockClear();
-  value = getValueFromExpr(scope, "tata|lower");
-  expect(value).toBeUndefined();
-  expect(console.debug).toHaveBeenCalledWith('filter "lower" does not exist');
-  console.debug.mockClear();
-  value = getValueFromExpr(scope, "tata|");
-  expect(value).toBeUndefined();
-  expect(console.debug).toHaveBeenCalledWith('filter expected at "tata|"');
+  expect(() => {
+    getValueFromExpr(scope, "tata|lower");
+  }).toThrow(new ValueException('filter "lower" does not exist'));
+  expect(() => {
+    getValueFromExpr(scope, "tata|");
+  }).toThrow(new ValueException('filter expected at "tata|"'));
 });
 
 test("remaining expression", () => {
-  console.debug.mockClear();
-  let value = getValueFromExpr(scope, "tata%bidule");
-  expect(value).toBeUndefined();
-  expect(console.debug).toHaveBeenCalledWith('unexpected token "%bidule", expected end of expression');
+  expect(() => {
+    getValueFromExpr(scope, "tata%bidule");
+  }).toThrow(new ValueException('unexpected token "%bidule", expected end of expression'));
 });

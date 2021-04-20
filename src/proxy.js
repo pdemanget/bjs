@@ -1,101 +1,71 @@
-export const isProxyAttr = '__isProxy';
+export const IS_PROXY_ATTR = '$bjs:isProxy';
 
-export function proxyHasFunction($obj, target, prop) {
-  return prop in $obj;
+export function proxyHasFunction(target, prop) {
+  return prop in target;
 }
 
-export function proxyGetFunction($obj, target, prop, receiver) {
-  if (prop == isProxyAttr) {
-    return true;
-  } else {
-    return $obj[prop];
-  }
+export function proxyGetFunction(target, prop, receiver) {
+  return target[prop];
 }
 
-export function proxySetFunction($obj, target, prop, value, receiver) {
-  $obj[prop] = value;
+export function proxySetFunction(target, prop, value, receiver) {
+  target[prop] = value;
   return true;
 }
 
-export function proxyDeletePropertyFunction($obj, target, prop) {
-  if (prop in $obj) {
-    delete $obj[prop];
+export function proxyDeletePropertyFunction(target, prop) {
+  if (prop in target) {
+    delete target[prop];
   }
   return true;
 }
 
-export function proxyOwnKeyFunction($obj, target) {
-  return Object.keys($obj);
+export function proxyOwnKeyFunction(target) {
+  return Reflect.ownKeys(target);
 }
 
-export function proxyGetOwnPropertyDescriptorFunction($obj, target, prop) {
-  if (prop in $obj) {
-    return {
-      enumerable: true,
-      configurable: true,
-      value: $obj[prop],
-    };
-  }
+export function proxyGetOwnPropertyDescriptorFunction(target, prop) {
+  return Reflect.getOwnPropertyDescriptor(target, prop);
 }
 
 export function createProxy(obj, overrides) {
-  const $obj = obj || {};
+  const realOverrides = {...(overrides || {})};
+  const hasFct = realOverrides.has || proxyHasFunction;
+  delete realOverrides.has;
+  const getFct = realOverrides.get || proxyGetFunction;
+  delete realOverrides.get;
+  const toStringFct = function() {
+    return `[Proxy] ${JSON.stringify(this, null, 2)}`;
+  };
   const handler = Object.assign({
     has(target, prop) {
-      return proxyHasFunction($obj, target, prop);
+      return prop == IS_PROXY_ATTR || prop == 'toString' || hasFct(target, prop);
     },
     get(target, prop, receiver) {
-      return proxyGetFunction($obj, target, prop, receiver);
+      if (prop == IS_PROXY_ATTR) {
+        return true;
+      } else if (prop == 'toString') {
+        return toStringFct;
+      } else {
+        let value = getFct(target, prop, receiver);
+        if (typeof value == 'function') {
+          value = value.bind(target);
+        }
+        return value;
+      }
     },
     set(target, prop, value, receiver) {
-      return proxySetFunction($obj, target, prop, value, receiver);
+      return proxySetFunction(target, prop, value, receiver);
     },
     deleteProperty(target, prop) {
-      return proxyDeletePropertyFunction($obj, target, prop);
+      return proxyDeletePropertyFunction(target, prop);
     },
     ownKeys(target) {
-      return proxyOwnKeyFunction($obj, target);
+      return proxyOwnKeyFunction(target);
     },
     getOwnPropertyDescriptor(target, prop) {
-      return proxyGetOwnPropertyDescriptorFunction($obj, target, prop);
+      return proxyGetOwnPropertyDescriptorFunction(target, prop);
     },
-  }, overrides || {});
-  return new Proxy({}, handler);
-}
-
-export function setObjectPropValue(obj, prop, value, valueChangedEvent) {
-  let finalValue;
-  if (typeof value == "object") {
-    if (value[isProxyAttr]) {
-      // value is already proxified
-      finalValue = value;
-    } else {
-      finalValue = createProxy(value, {
-        set(subtarget, subprop, subvalue, subreceiver) {
-          return setObjectPropValue(value, subprop, subvalue, valueChangedEvent);
-        },
-        deleteProperty(subtarget, subprop) {
-          return deleteObjectProp(value, subprop, valueChangedEvent);
-        },
-      });
-    }
-  } else {
-    // no need to proxy
-    finalValue = value;
-  }
-  const old = obj[prop];
-  if (old != finalValue) {
-    obj[prop] = finalValue;
-    valueChangedEvent(prop, old, finalValue);
-  }
-  return true;
-}
-
-export function deleteObjectProp(obj, prop, valueChangedEvent) {
-  if (prop in obj) {
-    const old = obj[prop];
-    valueChangedEvent(prop, old);
-    delete obj[prop];
-  }
-  return true;
+  }, realOverrides);
+  return new Proxy(obj || {}, handler);
 }
