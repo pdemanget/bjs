@@ -1,5 +1,11 @@
 import {jest, test, expect, beforeEach, afterEach} from '@jest/globals';
-import {isProxyAttr} from '../src/proxy.js';
+import {IS_PROXY_ATTR} from '../src/proxy.js';
+import {
+  SCOPE_NAME_ATTR,
+  SUPER_ATTR,
+  INST_ATTR,
+  EL_ATTR,
+} from "../src/scope_common.js";
 import Bjs from "../src/b.js";
 
 function instBjs(scope, watchers, templates) {
@@ -18,6 +24,7 @@ function instBjs(scope, watchers, templates) {
   jest.spyOn(Bjs.prototype, 'findBinds').mockImplementation(() => undefined);
   const doc = {
     dispatchEvent: jest.fn(),
+    querySelectorAll: jest.fn(),
   };
   const b = new Bjs(doc);
   jest.restoreAllMocks();
@@ -31,20 +38,17 @@ test("Bjs", () => {
   expect(Bjs.name).toEqual('Bjs');
   expect(Object.getOwnPropertyNames(Bjs.prototype).sort()).toEqual([
     'constructor',
-    'superAttr',
-    'instAttr',
     'createScope',
     'createWatchers',
     'valueChangedEvent',
-    'escapeRegex',
-    'setBoundValues',
+    'triggerWatchers',
+    'applyValues',
     'createTemplates',
     'evaluateTemplates',
     'evaluateTemplate',
     'renderTemplateBif',
     'renderTemplateBfor',
     'findBinds',
-    'findVarExprs',
     'addBind',
     'getBindValue',
   ].sort());
@@ -76,28 +80,30 @@ test("Bjs constructor", () => {
 
 test("Bjs createScope", () => {
   const b = instBjs();
-  const superAttr = b.superAttr;
-  const instAttr = b.instAttr;
   b.valueChangedEvent = jest.fn();
+  let domElement = {
+    dispatchEvent: jest.fn(),
+    querySelectorAll: jest.fn(),
+  };
   let origScope = {
     '$index': 2,
     '$value': 'test',
   };
   let superScope = {
     'country': 'France',
-    [superAttr]: null,
+    [SUPER_ATTR]: null,
   };
-  let scope = b.createScope(origScope, superScope);
-  expect(isProxyAttr in scope).toBe(false);
+  let scope = b.createScope(domElement, origScope, superScope);
+  expect(IS_PROXY_ATTR in scope).toBe(true);
   expect('$value' in scope).toBe(true);
-  expect(instAttr in scope).toBe(true);
-  expect(superAttr in scope).toBe(true);
+  expect(INST_ATTR in scope).toBe(true);
+  expect(SUPER_ATTR in scope).toBe(true);
   expect('country' in scope).toBe(true);
   expect('nonexistant' in scope).toBe(false);
-  expect(scope[isProxyAttr]).toBe(true);
+  expect(scope[IS_PROXY_ATTR]).toBe(true);
   expect(scope['$value']).toEqual('test');
-  expect(scope[instAttr]).toBe(b);
-  expect(scope[superAttr]).toBe(superScope);
+  expect(scope[INST_ATTR]).toBe(b);
+  expect(scope[SUPER_ATTR]).toBe(superScope);
   expect(scope['country']).toEqual('France');
   expect(scope['nonexistant']).toBeUndefined();
   scope.toto = 'titi';
@@ -114,17 +120,20 @@ test("Bjs createScope", () => {
     ['$value', 'test'],
     ['toto', 'titi'],
   ].sort());
-  expect(b.valueChangedEvent).toHaveBeenCalledWith('toto', undefined, 'titi');
+  expect(b.valueChangedEvent).toHaveBeenCalledWith(scope, 'toto', undefined, 'titi');
   b.valueChangedEvent.mockClear();
   const totoValueObj = {
     any: 'prop',
   };
   scope.toto = totoValueObj;
-  expect(b.valueChangedEvent).toHaveBeenCalledWith('toto', 'titi', totoValueObj);
+  expect(b.valueChangedEvent).toHaveBeenCalledWith(scope, 'toto', 'titi', totoValueObj);
+  b.valueChangedEvent.mockClear();
+  scope.toto.any = 'PROP';
+  expect(b.valueChangedEvent).toHaveBeenCalledWith(scope.toto, 'any', 'prop', 'PROP');
   b.valueChangedEvent.mockClear();
   scope.toto = 'changed';
-  expect(b.valueChangedEvent).toHaveBeenCalledWith('toto', totoValueObj, 'changed');
-  expect(b.valueChangedEvent.mock.calls[0][1]).not.toBe(totoValueObj);
+  expect(b.valueChangedEvent).toHaveBeenCalledWith(scope, 'toto', totoValueObj, 'changed');
+  expect(b.valueChangedEvent.mock.calls[0][2]).not.toBe(totoValueObj);
   b.valueChangedEvent.mockClear();
   scope.toto = 'changed';
   expect(b.valueChangedEvent).not.toHaveBeenCalled();
@@ -133,23 +142,23 @@ test("Bjs createScope", () => {
   delete scope.toto;
   expect('toto' in scope).toBe(false);
   expect('toto' in origScope).toBe(false);
-  expect(b.valueChangedEvent).toHaveBeenCalledWith('toto', totoValueObj);
-  expect(b.valueChangedEvent.mock.calls[0][1]).not.toBe(totoValueObj);
+  expect(b.valueChangedEvent).toHaveBeenCalledWith(scope, 'toto', totoValueObj);
+  expect(b.valueChangedEvent.mock.calls[0][2]).not.toBe(totoValueObj);
   b.valueChangedEvent.mockClear();
   // second test with empty scope and super
   scope = b.createScope();
   expect(Object.keys(scope).length).toEqual(0);
   scope.toto = 'titi';
-  expect(isProxyAttr in scope).toBe(false);
+  expect(IS_PROXY_ATTR in scope).toBe(true);
   expect('toto' in scope).toBe(true);
-  expect(instAttr in scope).toBe(true);
-  expect(superAttr in scope).toBe(false);
+  expect(INST_ATTR in scope).toBe(true);
+  expect(SUPER_ATTR in scope).toBe(false);
   expect('country' in scope).toBe(false);
   expect('nonexistant' in scope).toBe(false);
-  expect(scope[isProxyAttr]).toBe(true);
+  expect(scope[IS_PROXY_ATTR]).toBe(true);
   expect(scope['toto']).toEqual('titi');
-  expect(scope[instAttr]).toBe(b);
-  expect(scope[superAttr]).toBeUndefined();
+  expect(scope[INST_ATTR]).toBe(b);
+  expect(scope[SUPER_ATTR]).toBeNull();
   expect(scope['country']).toBeUndefined();
   expect(scope['nonexistant']).toBeUndefined();
 });
@@ -158,7 +167,7 @@ test("Bjs createWatchers", () => {
   const b = instBjs();
   let watchers = b.createWatchers();
   expect(Object.keys(watchers).length).toEqual(0);
-  expect(watchers[isProxyAttr]).toBe(true);
+  expect(watchers[IS_PROXY_ATTR]).toBe(true);
   let countryWatchers = watchers['country'];
   expect(Object.keys(watchers).length).toEqual(1);
   expect(countryWatchers).toEqual([]);
@@ -168,48 +177,97 @@ test("Bjs createWatchers", () => {
 
 test("Bjs valueChangedEvent", () => {
   const b = instBjs();
-  b.watchers = {
-    'country': [
-      jest.fn(),
-      jest.fn(),
-    ],
-    'other': [
-      jest.fn(),
-    ],
-  };
+  b.triggerWatchers = jest.fn();
   b.evaluateTemplates = jest.fn();
-  b.setBoundValues = jest.fn();
-  b.valueChangedEvent('country', 'old value', 'new value');
-  expect(b.watchers['country'][0]).toHaveBeenCalledWith('new value', 'old value');
-  expect(b.watchers['country'][1]).toHaveBeenCalledWith('new value', 'old value');
-  expect(b.watchers['other'][0]).not.toHaveBeenCalled();
+  b.applyValues = jest.fn();
+  const scope = {
+    'country': 'France',
+  }
+  b.valueChangedEvent(scope, 'country', 'Italy', 'France');
+  expect(b.triggerWatchers).toHaveBeenCalledWith(scope, 'country', 'Italy', 'France');
   expect(b.evaluateTemplates).toHaveBeenCalled();
-  expect(b.setBoundValues).toHaveBeenCalledWith('country', b.scope, b.doc);
-  b.watchers['country'][0].mockClear();
-  b.watchers['country'][1].mockClear();
-  b.watchers['other'][0].mockClear();
-  b.evaluateTemplates.mockClear();
-  b.setBoundValues.mockClear();
+  expect(b.applyValues).toHaveBeenCalledWith(scope);
 });
 
-test("Bjs escapeRegex", () => {
+test("Bjs triggerWatchers", () => {
   const b = instBjs();
-  expect(b.escapeRegex('$index')).toEqual('\\$index');
-  expect(b.escapeRegex('$super.$value')).toEqual('\\$super\\.\\$value');
-});
-
-test("Bjs setBoundValues", () => {
-  const b = instBjs();
-  global.console.debug = jest.fn();
-  b.escapeRegex = jest.fn(name => name);
+  b.watchers = {
+    'a.b.country': [jest.fn()],
+    'a.b': [jest.fn()],
+    'a': [jest.fn(), jest.fn()],
+    'country': [jest.fn()],
+  };
+  let rootScope = {};
+  let superScope = {};
   let scope = {
+    'country': 'France',
+  };
+  const onlyRealProps = obj => {
+    return Object.fromEntries(Object.entries(obj).filter(([k, v]) => k[0] != '$').map(([k, v]) => [k, typeof v == 'object' ? onlyRealProps(v) : v]));
+  };
+  scope[SUPER_ATTR] = superScope;
+  scope[SCOPE_NAME_ATTR] = 'b';
+  superScope['b'] = scope;
+  superScope[SUPER_ATTR] = rootScope;
+  superScope[SCOPE_NAME_ATTR] = 'a';
+  rootScope['a'] = superScope;
+  rootScope[SUPER_ATTR] = null;
+  rootScope[SCOPE_NAME_ATTR] = null;
+  b.triggerWatchers(scope, 'country', 'Italy', 'France');
+  expect(b.watchers['a.b.country'][0]).toHaveBeenCalledWith('France', 'Italy', scope, 'country');
+  expect(b.watchers['a.b'][0]).toHaveBeenCalledWith(expect.any(Object), expect.any(Object), superScope, 'b');
+  let newBValue = onlyRealProps(b.watchers['a.b'][0].mock.calls[0][0]);
+  let oldBValue = onlyRealProps(b.watchers['a.b'][0].mock.calls[0][1]);
+  expect(newBValue).toEqual({'country': 'France'});
+  expect(oldBValue).toEqual({'country': 'Italy'});
+  expect(b.watchers['a'][0]).toHaveBeenCalledWith(expect.any(Object), expect.any(Object), rootScope, 'a');
+  newBValue = onlyRealProps(b.watchers['a'][0].mock.calls[0][0]);
+  oldBValue = onlyRealProps(b.watchers['a'][0].mock.calls[0][1]);
+  expect(newBValue).toEqual({'b': {'country': 'France'}});
+  expect(oldBValue).toEqual({'b': {'country': 'Italy'}});
+  expect(b.watchers['a'][1]).toHaveBeenCalledWith(expect.any(Object), expect.any(Object), rootScope, 'a');
+  newBValue = onlyRealProps(b.watchers['a'][1].mock.calls[0][0]);
+  oldBValue = onlyRealProps(b.watchers['a'][1].mock.calls[0][1]);
+  expect(newBValue).toEqual({'b': {'country': 'France'}});
+  expect(oldBValue).toEqual({'b': {'country': 'Italy'}});
+  expect(b.watchers['country'][0]).not.toHaveBeenCalled();
+  // test with loop boundary
+  b.watchers = {
+    'a.b.country': [jest.fn()],
+    'b.country': [jest.fn()],
+    'b': [jest.fn()],
+    'a.b': [jest.fn()],
+    'a': [jest.fn()],
+    'country': [jest.fn()],
+  };
+  superScope[SCOPE_NAME_ATTR] = '';
+  b.triggerWatchers(scope, 'country', 'Spain', 'France');
+  expect(b.watchers['a.b.country'][0]).not.toHaveBeenCalled();
+  expect(b.watchers['b.country'][0]).toHaveBeenCalledWith('France', 'Spain', scope, 'country');
+  expect(b.watchers['b'][0]).toHaveBeenCalledWith(expect.any(Object), expect.any(Object), superScope, 'b');
+  newBValue = onlyRealProps(b.watchers['b'][0].mock.calls[0][0]);
+  oldBValue = onlyRealProps(b.watchers['b'][0].mock.calls[0][1]);
+  expect(newBValue).toEqual({'country': 'France'});
+  expect(oldBValue).toEqual({'country': 'Spain'});
+  expect(b.watchers['a.b'][0]).not.toHaveBeenCalled();
+  expect(b.watchers['a'][0]).not.toHaveBeenCalled();
+  expect(b.watchers['country'][0]).not.toHaveBeenCalled();
+});
+
+test("Bjs applyValues", () => {
+  const b = instBjs();
+  const domElement = {
+    querySelectorAll: jest.fn(),
+  }
+  const scope = {
     toto: 'titi',
     foo: {
       bar: 'baz',
     },
-    [b.instAttr]: b,
+    [INST_ATTR]: b,
+    [EL_ATTR]: domElement,
   }
-  let elts = [
+  const elts = [
     {
       getAttribute: arg => (arg == 'bbind') ? 'toto' : undefined,
       type: 'text',
@@ -226,31 +284,6 @@ test("Bjs setBoundValues", () => {
       getAttribute: arg => (arg == 'bval') ? 'toto|upper' : undefined,
       innerText: 'tutu',
     },
-  ];
-  const rootElt = {
-    querySelectorAll: jest.fn(),
-  }
-  rootElt.querySelectorAll.mockReturnValue(elts),
-  b.setBoundValues('toto', scope, rootElt);
-  expect(rootElt.querySelectorAll).toHaveBeenCalledWith('* [bval^="toto"], * [bbind^="toto"]');
-  expect(elts[0]['value']).toEqual('titi');
-  expect(elts[0]['innerText']).toEqual('old text');
-  expect(elts[1]['value']).toEqual('Old');
-  expect(elts[1]['innerText']).toEqual('Old text');
-  expect(elts[2]['value']).toBeUndefined();
-  expect(elts[2]['innerText']).toEqual('TITI');
-  rootElt.querySelectorAll.mockClear();
-  delete scope.toto;
-  b.setBoundValues('toto', scope, rootElt);
-  expect(rootElt.querySelectorAll).toHaveBeenCalledWith('* [bval^="toto"], * [bbind^="toto"]');
-  expect(elts[0]['value']).toEqual('');
-  expect(elts[0]['innerText']).toEqual('old text');
-  expect(elts[1]['value']).toEqual('Old');
-  expect(elts[1]['innerText']).toEqual('Old text');
-  expect(elts[2]['value']).toBeUndefined();
-  expect(elts[2]['innerText']).toEqual('');
-  rootElt.querySelectorAll.mockClear();
-  elts = [
     {
       getAttribute: arg => (arg == 'bbind') ? 'foo' : undefined,
       type: 'text',
@@ -258,25 +291,35 @@ test("Bjs setBoundValues", () => {
       innerText: 'old text',
     },
     {
-      getAttribute: arg => (arg == 'bbind') ? 'foo.bar|capitalize' : undefined,
-      type: 'text',
-      value: 'Old',
+      getAttribute: arg => (arg == 'bval') ? 'foo.bar|capitalize' : undefined,
       innerText: 'Old text',
     },
     {
       getAttribute: arg => (arg == 'bval') ? "foo['bar']|capitalize" : undefined,
       innerText: 'tutu',
     },
+    {
+      getAttribute: arg => (arg == 'bval') ? "foo['bar'" : undefined,
+      innerText: 'bad expression',
+    },
   ];
-  rootElt.querySelectorAll.mockReturnValue(elts),
-  b.setBoundValues('foo', scope, rootElt);
-  expect(rootElt.querySelectorAll).toHaveBeenCalledWith('* [bval^="foo"], * [bbind^="foo"]');
-  expect(elts[0]['value']).toBe(scope.foo);
+  domElement.querySelectorAll.mockReturnValue(elts),
+  b.applyValues(scope);
+  expect(domElement.querySelectorAll).toHaveBeenCalledWith('* [bval], * [bbind]');
+  expect(elts[0]['value']).toEqual('titi');
   expect(elts[0]['innerText']).toEqual('old text');
-  expect(elts[1]['value']).toEqual('Baz');
+  expect(elts[1]['value']).toEqual('Old');
   expect(elts[1]['innerText']).toEqual('Old text');
   expect(elts[2]['value']).toBeUndefined();
-  expect(elts[2]['innerText']).toEqual('Baz');
+  expect(elts[2]['innerText']).toEqual('TITI');
+  expect(elts[3]['value']).toBe(scope.foo);
+  expect(elts[3]['innerText']).toEqual('old text');
+  expect(elts[4]['value']).toBeUndefined();
+  expect(elts[4]['innerText']).toEqual('Baz');
+  expect(elts[5]['value']).toBeUndefined();
+  expect(elts[5]['innerText']).toEqual('Baz');
+  expect(elts[6]['value']).toBeUndefined();
+  expect(elts[6]['innerText']).toEqual('bad expression');
 });
 
 test("Bjs createTemplates", () => {
@@ -524,29 +567,27 @@ test("Bjs renderTemplateBif", () => {
 
 test("Bjs renderTemplateBfor", () => {
   const b = instBjs();
+  const element = { cloneNode: jest.fn().mockReturnThis() };
   let scope = {};
-  let element = { cloneNode: jest.fn().mockReturnThis() };
-  b.createScope = (scope, superScope) => ({...scope, [b.superAttr]: superScope});
-  b.findVarExprs = jest.fn().mockReturnValue([]);
-  b.setBoundValues = jest.fn();
+  b.createScope = (domElement, scope, superScope) => ({...scope, [SUPER_ATTR]: superScope, [EL_ATTR]: domElement});
+  b.applyValues = jest.fn();
   expect(b.renderTemplateBfor(scope, element, 'lst')).toEqual([]);
   expect(element.cloneNode).not.toHaveBeenCalled();
-  expect(b.findVarExprs).not.toHaveBeenCalled();
-  expect(b.setBoundValues).not.toHaveBeenCalled();
+  expect(b.applyValues).not.toHaveBeenCalled();
   element.cloneNode.mockClear();
-  b.findVarExprs.mockClear();
-  b.setBoundValues.mockClear();
+  b.applyValues.mockClear();
   scope = {'lst': new Map([['k1', 'v1'], ['k2', 'v2']])};
-  b.findVarExprs.mockReturnValue(['$index', '$value']);
   const localScope1 = {
     '$index': 'k1',
     '$value': 'v1',
-    [b.superAttr]: scope,
+    [SUPER_ATTR]: scope,
+    [EL_ATTR]: element,
   };
   const localScope2 = {
     '$index': 'k2',
     '$value': 'v2',
-    [b.superAttr]: scope,
+    [SUPER_ATTR]: scope,
+    [EL_ATTR]: element,
   };
   expect(b.renderTemplateBfor(scope, element, 'lst')).toEqual([
     [element, localScope1],
@@ -554,13 +595,9 @@ test("Bjs renderTemplateBfor", () => {
   ]);
   expect(element.cloneNode).toHaveBeenCalledTimes(2);
   expect(element.cloneNode).toHaveBeenCalledWith(true);
-  expect(b.findVarExprs).toHaveBeenCalledTimes(2);
-  expect(b.findVarExprs).toHaveBeenCalledWith(element);
-  expect(b.setBoundValues).toHaveBeenCalledTimes(4);
-  expect(b.setBoundValues).toHaveBeenCalledWith('$index', localScope1, element);
-  expect(b.setBoundValues).toHaveBeenCalledWith('$value', localScope1, element);
-  expect(b.setBoundValues).toHaveBeenCalledWith('$index', localScope2, element);
-  expect(b.setBoundValues).toHaveBeenCalledWith('$value', localScope2, element);
+  expect(b.applyValues).toHaveBeenCalledTimes(2);
+  expect(b.applyValues).toHaveBeenCalledWith(localScope1);
+  expect(b.applyValues).toHaveBeenCalledWith(localScope2);
 });
 
 test("Bjs findBinds", () => {
@@ -619,35 +656,6 @@ test("Bjs findBinds", () => {
   }).toThrowError("tata[tutu] expression is forbidden in bbind, you can only use raw variable name");
   expect(b.addBind).toHaveBeenCalledTimes(1);
   expect(b.addBind).toHaveBeenCalledWith(elts[0], 'toto');
-});
-
-test("Bjs findVarExprs", () => {
-  const b = instBjs();
-  const elts = [
-    {
-      getAttribute: arg => (arg == 'bval') ? 'tutu' : undefined,
-    },
-    {
-      getAttribute: arg => undefined,
-    },
-    {
-      getAttribute: arg => '',
-    },
-    {
-      getAttribute: arg => (arg == 'bval') ? 'toto.titi' : undefined,
-    },
-    {
-      getAttribute: arg => (arg == 'bbind') ? 'tutu' : undefined,
-    },
-  ];
-  const rootElt = {
-    querySelectorAll: jest.fn().mockReturnValue(elts),
-  };
-  expect(b.findVarExprs(rootElt).sort()).toEqual([
-    'tutu',
-    'toto.titi',
-  ].sort());
-  expect(rootElt.querySelectorAll).toHaveBeenCalledWith("* [bval], * [bbind]");
 });
 
 test("Bjs addBind", () => {

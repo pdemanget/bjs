@@ -38,26 +38,30 @@
  *   DOTEXPR := "." VAR_EXPRESSION
  *   SQUAREEXPR := "[" EXPRESSION "]" SUBSCOPE
  */
+import {
+  INST_ATTR,
+} from "./scope_common.js";
+
+export class ValueException extends EvalError {
+  constructor(message) {
+    super(message);
+  }
+};
 
 export function getValueFromExpr(scope, expr) {
-  try {
-    let rootScope = scope;
-    while (rootScope.$super != null) {
-      rootScope = rootScope.$super;
-    }
-    const {
-      nextScope,
-      nextEvaluatedExpr,
-      rest,
-    } = parseExpression(rootScope, scope, '', expr);
-    if (rest) {
-      throw `unexpected token "${rest}", expected end of expression`;
-    }
-    return nextScope;
-  } catch (e) {
-    console.debug(e);
-    return undefined;
+  let rootScope = scope;
+  while (rootScope.$super != null) {
+    rootScope = rootScope.$super;
   }
+  const {
+    nextScope,
+    nextEvaluatedExpr,
+    rest,
+  } = parseExpression(rootScope, scope, '', expr);
+  if (rest) {
+    throw new ValueException(`unexpected token "${rest}", expected end of expression`);
+  }
+  return nextScope;
 }
 
 const DOT = '.';
@@ -114,10 +118,11 @@ function parseFilterId(rootScope, scope, evaluatedExpr, expr) {
   if (m) {
     const filter = m[1];
     const rest = m[2];
-    if (!rootScope.$b.filters.has(filter)) {
-      throw `filter "${filter}" does not exist`;
+    const bjs = rootScope[INST_ATTR];
+    if (!bjs.filters.has(filter)) {
+      throw new ValueException(`filter "${filter}" does not exist`);
     }
-    const nextScope = rootScope.$b.filters.get(filter);
+    const nextScope = bjs.filters.get(filter);
     const nextEvaluatedExpr = `${evaluatedExpr}${filter}`;
     return {
       nextScope,
@@ -125,7 +130,7 @@ function parseFilterId(rootScope, scope, evaluatedExpr, expr) {
       rest,
     };
   } else {
-    throw `filter expected at "${evaluatedExpr}"`;
+    throw new ValueException(`filter expected at "${evaluatedExpr}"`);
   }
 }
 
@@ -149,7 +154,7 @@ function parseSimpleExpression(rootScope, scope, evaluatedExpr, expr) {
       return literalResult;
     }
   } else {
-    throw `expression expected at "${evaluatedExpr}"`;
+    throw new ValueException(`expression expected at "${evaluatedExpr}"`);
   }
 }
 
@@ -230,7 +235,7 @@ function parseId(rootScope, scope, evaluatedExpr, expr) {
     const id = m[1];
     const rest = m[2];
     if (!(id in scope)) {
-      throw `identifier "${id}" does not exist in scope "${evaluatedExpr || '<root>'}"`;
+      throw new ValueException(`identifier "${id}" does not exist in scope "${evaluatedExpr || '<root>'}"`);
     }
     const nextScope = scope[id];
     const nextEvaluatedExpr = `${evaluatedExpr}${id}`;
@@ -240,7 +245,7 @@ function parseId(rootScope, scope, evaluatedExpr, expr) {
       rest,
     };
   } else {
-    throw `identifier expected at "${evaluatedExpr}", "${expr}" given`;
+    throw new ValueException(`identifier expected at "${evaluatedExpr}", "${expr}" given`);
   }
 }
 
@@ -270,12 +275,12 @@ function parseSquareExpr(rootScope, scope, evaluatedExpr, expr) {
   const subEvaluatedExpr = subExprResult.nextEvaluatedExpr;
   nextEvaluatedExpr += subEvaluatedExpr;
   if (!subExprResult.rest || subExprResult.rest[0] != CSB) {
-    throw `${CSB} expected at "${nextEvaluatedExpr}", "${subExprResult.rest}" given`;
+    throw new ValueException(`${CSB} expected at "${nextEvaluatedExpr}", "${subExprResult.rest}" given`);
   }
   const rest = subExprResult.rest.substring(1);
   nextEvaluatedExpr += CSB;
   if (!(subExprResult.nextScope in scope)) {
-    throw `map arg "${subExprResult.nextScope}" (${subEvaluatedExpr}) does not exist in scope "${evaluatedExpr || '<root>'}"`;
+    throw new ValueException(`map arg "${subExprResult.nextScope}" (${subEvaluatedExpr}) does not exist in scope "${evaluatedExpr || '<root>'}"`);
   }
   const nextScope = scope[subExprResult.nextScope];
   return parseSubScope(rootScope, nextScope, nextEvaluatedExpr, rest);

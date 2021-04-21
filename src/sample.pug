@@ -3,7 +3,6 @@ html(lang="en")
   head
     meta(charset="utf-8")
     title= htmlWebpackPlugin.options.title
-    != htmlWebpackPlugin.tags.headTags
   body
     noscript Javascript not started
     h1= htmlWebpackPlugin.options.title
@@ -17,14 +16,14 @@ html(lang="en")
       li.country(bfor="countries")
         span(bval="$index")
         | . 
-        span(bval="$value.country")
+        span(bval="$value.name")
         span(style="padding-left: 1rem; cursor: pointer; user-select: none; color: red;" onclick="removeCountry(this.parentNode.querySelector('span').innerText)")
           | × Remove
         ul
           li.zone(bfor="$value.zones")
             span(bval="$value")
-            |  − test literal and filter: 
-            span(bval="$super.$value.country|add:': it%qs a tyranny!'|capitalize")
+            |  − test super, literal and filter: 
+            span(bval="$super.$value.name|add:': it%qs a tyranny!'|capitalize")
     script.
       document.addEventListener('bready', (event) => {
         const b = event.detail;
@@ -41,11 +40,12 @@ html(lang="en")
             b.scope.country = '';
           }
         }); 
+        b.watchers.countries.push((value, old) => console.log(`countries: ${old} -> ${value}`)); 
         b.scope.countries = [];
         window.addCountry = function(event) {
           if (event.key == "Enter" && event.target.value) {
             const countryObj = {
-              country: event.target.value,
+              name: event.target.value,
               zones: ['zone1', 'zone2', 'zone3'],
             }
             b.scope.countries.push(countryObj);

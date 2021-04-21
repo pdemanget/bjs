@@ -1,9 +1,14 @@
 import {
   createProxy,
-  setObjectPropValue,
-  deleteObjectProp,
-  isProxyAttr,
 } from "./proxy.js";
+import {
+  SCOPE_NAME_ATTR,
+  SUPER_ATTR,
+  EL_ATTR,
+} from "./scope_common.js";
+import {
+  createScope,
+} from "./scope.js";
 import {
   getValueFromExpr,
 } from "./expr.js";
@@ -14,9 +19,6 @@ import {
   capitalizeFilter,
   trimFilter,
 } from "./filters.js";
-
-const superAttr = "$super";
-const instAttr = "$b";
 
 /*
  * BJS framework
@@ -48,100 +50,76 @@ class Bjs {
     this.doc.dispatchEvent(bReadyEvent);
   }
 
-  get superAttr() {
-    return superAttr;
-  }
-
-  get instAttr() {
-    return instAttr;
-  }
-
-  createScope(scope, superScope) {
-    const $superAttr = this.superAttr;
-    const $instAttr = this.instAttr;
-    const $super = superScope || null;
-    const $bInstance = this;
-    const $scope = scope || {};
+  createScope(domElement, scope, superScope) {
     const $valueChangedEvent = this.valueChangedEvent.bind(this);
-    return createProxy($scope, {
-      has(target, prop) {
-        return (
-          prop in $scope
-          || prop == $instAttr
-          || ($super != null && prop == $superAttr)
-          || ($super != null && prop in $super)
-        );
-      },
-      get(target, prop, receiver) {
-        if (prop == isProxyAttr) {
-          return true;
-        } else if (prop == $instAttr) {
-          return $bInstance;
-        } else if ($super != null && prop == $superAttr) {
-          return $super;
-        } else if ($super != null && !(prop in $scope)) {
-          return $super[prop];
-        } else {
-          return $scope[prop];
-        }
-      },
-      set(target, prop, value, receiver) {
-        const old = typeof $scope[prop] == "object" ? Object.assign({}, $scope[prop]) : $scope[prop];
-        const valueChangedEvent = function() {
-          $valueChangedEvent(prop, old, value);
-        }
-        return setObjectPropValue($scope, prop, value, valueChangedEvent);
-      },
-      deleteProperty(target, prop) {
-        const old = typeof $scope[prop] == "object" ? Object.assign({}, $scope[prop]) : $scope[prop];
-        const valueChangedEvent = function() {
-          $valueChangedEvent(prop, old);
-        }
-        return deleteObjectProp($scope, prop, valueChangedEvent);
-      },
-    });
+    const realScope = createScope(this, domElement || this.doc, $valueChangedEvent, scope, '', superScope);
+    return realScope;
   }
 
   createWatchers() {
     const $watchers = {};
     return createProxy($watchers, {
       get(target, prop, receiver) {
-        if (prop == isProxyAttr) {
-          return true;
-        } else {
-          if (!(prop in $watchers)) {
-            $watchers[prop] = [];
-          }
-          return $watchers[prop];
+        if (!(prop in $watchers)) {
+          $watchers[prop] = [];
         }
+        return $watchers[prop];
       },
     });
   }
 
-  valueChangedEvent(name, old, value) {
-    this.watchers[name].forEach(watcher => watcher(value, old));
+  valueChangedEvent(scope, property, oldValue, newValue) {
+    this.triggerWatchers(scope, property, oldValue, newValue);
     this.evaluateTemplates();
-    this.setBoundValues(name, this.scope, this.doc);
+    this.applyValues(scope);
   }
 
-  escapeRegex(s) {
-    // https://stackoverflow.com/questions/3561493/is-there-a-regexp-escape-function-in-javascript/3561711#3561711
-    return s.replace(/[\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  triggerWatchers(scope, propertyName, oldValue, newValue) {
+    const propertyNames = [propertyName];
+    let n = 0;
+    const MAX_RECURS = 1000;
+    for (let localScope = scope; localScope; localScope = localScope[SUPER_ATTR]) {
+      const localPropName = localScope[SCOPE_NAME_ATTR];
+      if (localPropName) {
+        propertyNames.unshift(localPropName);
+      } else {
+        break; // loop scope or root scope reached
+      }
+      n++;
+      if (n == MAX_RECURS) {
+        console.error(`${MAX_RECURS} recursion reached in scope ${scope} to reach rootScope`);
+        return;
+      }
+    }
+    let localScope = scope;
+    let localOldValue = oldValue;
+    let localNewValue = newValue;
+    for (let i = propertyNames.length; i > 0; i--) {
+      const fullPropertyName = propertyNames.slice(0, i).join('.');
+      const localProperty = propertyNames[i - 1];
+      const oldScope = {...localScope};
+      oldScope[localProperty] = localOldValue;
+      this.watchers[fullPropertyName].forEach(watcher => watcher(localNewValue, localOldValue, localScope, localProperty));
+      localOldValue = oldScope;
+      localNewValue = localScope;
+      localScope = localScope[SUPER_ATTR];
+    }
   }
 
-
-  setBoundValues(name, scope, rootElt) {
-    const selector = `* [bval^="${name}"], * [bbind^="${name}"]`;
-    const regex = new RegExp(`^${this.escapeRegex(name)}([[.|].+)?$`);
-    for (let elt of rootElt.querySelectorAll(selector)) {
+  applyValues(scope) {
+    const domElement = scope[EL_ATTR];
+    const selector = `* [bval], * [bbind]`;
+    for (let elt of domElement.querySelectorAll(selector)) {
       const varExpr = elt.getAttribute('bval') || elt.getAttribute('bbind');
-      if (regex.test(varExpr)) {
+      try {
         const value = getValueFromExpr(scope, varExpr);
         if (elt.type) {
           elt.value = value === undefined ? '' : value;
         } else {
           elt.innerText = value === undefined ? '' : value;
         }
+      } catch (e) {
+        // this could be normal to have an evaluated expression that fails
       }
     }
   }
@@ -211,7 +189,12 @@ class Bjs {
 
   renderTemplateBif(scope, element, varExpr) {
     const res = [];
-    const value = getValueFromExpr(scope, varExpr);
+    let value;
+    try {
+      value = getValueFromExpr(scope, varExpr);
+    } catch(e) {
+      value = false;
+    }
     if (value) {
       res.push([element.cloneNode(true), scope]);
     }
@@ -220,17 +203,20 @@ class Bjs {
 
   renderTemplateBfor(scope, element, varExpr) {
     const res = [];
-    const iterable = getValueFromExpr(scope, varExpr);
+    let iterable;
+    try {
+      iterable = getValueFromExpr(scope, varExpr);
+    } catch(e) {
+      iterable = null;
+    }
     if (iterable && iterable.entries) {
       for (let entry of iterable.entries()) {
         const oneElt = element.cloneNode(true);
-        const localScope = this.createScope({
+        const localScope = this.createScope(oneElt, {
           "$index": entry[0],
           "$value": entry[1],
         }, scope);
-        for (let subVarExpr of this.findVarExprs(oneElt)) {
-          this.setBoundValues(subVarExpr, localScope, oneElt);
-        }
+        this.applyValues(localScope);
         res.push([oneElt, localScope]);
       }
     }
@@ -248,18 +234,6 @@ class Bjs {
         this.addBind(elt, varName);
       }
     }
-  }
-
-  findVarExprs(rootElt) {
-    const varExprs = [];
-    const selector = '* [bval], * [bbind]';
-    for (let elt of rootElt.querySelectorAll(selector)) {
-      const varExpr = elt.getAttribute('bval') || elt.getAttribute('bbind');
-      if (varExpr && !varExprs.includes(varExpr)) {
-        varExprs.push(varExpr);
-      }
-    }
-    return varExprs;
   }
 
   addBind(elt, varName) {

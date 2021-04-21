@@ -3,7 +3,7 @@ X meaning fullfunctions (and directives)
 X bfor directive (can create DOM elements), bval reference the scope values
 X DRY principles
 X filters, literals
-- unit tests
+X unit tests
 - battr dirctive for html attributes
 - simple router (url html5 change event)
 - partials
