@@ -4,6 +4,6 @@ X bfor directive (can create DOM elements), bval reference the scope values
 X DRY principles
 X filters, literals
 X unit tests
-- battr dirctive for html attributes
+X battr directive for html attributes
 - simple router (url html5 change event)
 - partials

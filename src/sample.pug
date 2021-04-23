@@ -13,7 +13,7 @@ html(lang="en")
       | Your country is 
       span(bval="country")
     ul(class="country-list" bif="countries")
-      li.country(bfor="countries")
+      li.country(bfor="countries" battr="name=${$value.name}|id=country-${$index}|class=country removable")
         span(bval="$index")
         | . 
         span(bval="$value.name")

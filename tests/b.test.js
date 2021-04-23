@@ -43,6 +43,7 @@ test("Bjs", () => {
     'valueChangedEvent',
     'triggerWatchers',
     'applyValues',
+    'getBAttributesFromExpr',
     'createTemplates',
     'evaluateTemplates',
     'evaluateTemplate',
