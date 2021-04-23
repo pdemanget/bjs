@@ -1,8 +1,6 @@
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin'); // default webpack optimizer
-const CopyPlugin = require("copy-webpack-plugin");
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const HtmlWebpackTagsPlugin = require('html-webpack-tags-plugin');
 
 module.exports = {
   entry: {
@@ -30,6 +28,8 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       title: 'BJS',
+      scriptLoading: 'blocking',
+      inject: 'head',
       minify: false,
       chunks: ['b.min'],
     }),
@@ -37,21 +37,10 @@ module.exports = {
       template: './src/sample.pug',
       filename: 'sample.html',
       title: 'BJS sample',
+      scriptLoading: 'blocking',
+      inject: 'head',
       minify: false,
       chunks: ['b.min'],
-    }),
-    new CopyPlugin({
-      patterns: [
-        {
-          from: './src/*.css',
-          to: '[name][ext]',
-          force: true,
-        },
-      ],
-    }),
-    new HtmlWebpackTagsPlugin({
-      tags: ['b.css'],
-      append: true,
     }),
   ],
   devtool: "source-map",
