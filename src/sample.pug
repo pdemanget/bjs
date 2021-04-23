@@ -3,7 +3,7 @@ html(lang="en")
   head
     meta(charset="utf-8")
     title= htmlWebpackPlugin.options.title
-  body
+  body(bload)
     noscript Javascript not started
     h1= htmlWebpackPlugin.options.title
     form(onsubmit="return false")
@@ -12,14 +12,14 @@ html(lang="en")
     h2
       | Your country is 
       span(bval="country")
-    ul(bif="countries")
+    ul(class="country-list" bif="countries")
       li.country(bfor="countries")
         span(bval="$index")
         | . 
         span(bval="$value.name")
         span(style="padding-left: 1rem; cursor: pointer; user-select: none; color: red;" onclick="removeCountry(this.parentNode.querySelector('span').innerText)")
           | × Remove
-        ul
+        ul(class="zone-list")
           li.zone(bfor="$value.zones")
             span(bval="$value")
             |  − test super, literal and filter: 

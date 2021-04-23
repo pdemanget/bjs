@@ -1,6 +1,8 @@
 const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin'); // default webpack optimizer
+const CopyPlugin = require("copy-webpack-plugin");
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const HtmlWebpackTagsPlugin = require('html-webpack-tags-plugin');
 
 module.exports = {
   entry: {
@@ -38,6 +40,19 @@ module.exports = {
       minify: false,
       chunks: ['b.min'],
     }),
+    new CopyPlugin({
+      patterns: [
+        {
+          from: './src/*.css',
+          to: '[name][ext]',
+          force: true,
+        },
+      ],
+    }),
+    new HtmlWebpackTagsPlugin({
+      tags: ['b.css'],
+      append: true,
+    }),
   ],
   devtool: "source-map",
   devServer: {
@@ -51,6 +66,10 @@ module.exports = {
   module: {
     rules: [
       {
+        test: /\.html$/,
+        type: 'asset/resource',
+      },
+      {
         test: /\.pug$/,
         use: [
           {
@@ -60,10 +79,6 @@ module.exports = {
             }
           },
         ],
-      },
-      {
-        test: /sample\.html$/,
-        type: 'asset/resource',
       },
     ],
   },

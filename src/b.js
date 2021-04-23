@@ -140,7 +140,7 @@ class Bjs {
         }
       }
       template.content.appendChild(eltCloned);
-      elt.parentElement.replaceChild(template, elt);
+      elt.replaceWith(template);
       template.nbElts = 0;
       templates.push(template);
     }
@@ -194,6 +194,12 @@ class Bjs {
       value = getValueFromExpr(scope, varExpr);
     } catch(e) {
       value = false;
+    }
+    // ensure empty array, object, map or set are considered falsy
+    if (value instanceof Map || value instanceof Set) {
+      value = value.size;
+    } else if (value instanceof Array || value instanceof Object) {
+      value = Object.entries(value).length;
     }
     if (value) {
       res.push([element.cloneNode(true), scope]);
@@ -259,14 +265,23 @@ class Bjs {
     }
   }
 }
+Bjs.load = function(doc) {
+  doc.addEventListener('DOMContentLoaded', () => new this(doc));
+}.bind(Bjs);
 
-try {
-  // document is not defined in nodejs
-  if (document) {
-    document.addEventListener('DOMContentLoaded', () => new Bjs(document));
+const isBrowser = new Function("try{return this===window;}catch(e){return false;}");
+const isNode = new Function("try{return this===global;}catch(e){return false;}");
+
+if (isBrowser && isNode) {
+  if (isBrowser) {
+    window.Bjs = Bjs;
+    if (document && document.body.hasAttribute('bload')) {
+      document.body.removeAttribute('bload');
+      Bjs.load(document);
+    }
+  } else if (isNode) {
+    global.Bjs = Bjs;
   }
-} catch (e) {
-  // nodejs
 }
 
 export default Bjs;

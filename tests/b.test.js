@@ -330,18 +330,14 @@ test("Bjs createTemplates", () => {
       hasAttribute: arg => arg == 'bif',
       getAttribute: arg => (arg == 'bif') ? 'countries' : undefined,
       removeAttribute: jest.fn(),
-      parentElement: {
-        replaceChild: jest.fn(),
-      },
+      replaceWith: jest.fn(),
     },
     {
       cloneNode: jest.fn().mockReturnThis(),
       hasAttribute: arg => arg == 'bfor',
       getAttribute: arg => (arg == 'bfor') ? 'countries' : undefined,
       removeAttribute: jest.fn(),
-      parentElement: {
-        replaceChild: jest.fn(),
-      },
+      replaceWith: jest.fn(),
     },
   ];
   b.doc.querySelectorAll = jest.fn().mockReturnValue(elts);
@@ -376,10 +372,10 @@ test("Bjs createTemplates", () => {
   expect(elts[0].removeAttribute).toHaveBeenCalledWith('bif');
   expect(elts[1].removeAttribute).toHaveBeenCalledTimes(1);
   expect(elts[1].removeAttribute).toHaveBeenCalledWith('bfor');
-  expect(elts[0].parentElement.replaceChild).toHaveBeenCalledTimes(1);
-  expect(elts[0].parentElement.replaceChild).toHaveBeenCalledWith(mockTemplates[1], elts[0]);
-  expect(elts[1].parentElement.replaceChild).toHaveBeenCalledTimes(1);
-  expect(elts[1].parentElement.replaceChild).toHaveBeenCalledWith(mockTemplates[0], elts[1]);
+  expect(elts[0].replaceWith).toHaveBeenCalledTimes(1);
+  expect(elts[0].replaceWith).toHaveBeenCalledWith(mockTemplates[1]);
+  expect(elts[1].replaceWith).toHaveBeenCalledTimes(1);
+  expect(elts[1].replaceWith).toHaveBeenCalledWith(mockTemplates[0]);
   expect(mockTemplates[0].setAttribute).toHaveBeenCalledTimes(3);
   expect(mockTemplates[0].setAttribute).toHaveBeenCalledWith('type', 'bjs');
   expect(mockTemplates[0].setAttribute).toHaveBeenCalledWith('directive', 'bfor');
@@ -563,6 +559,42 @@ test("Bjs renderTemplateBif", () => {
   scope = { 'toto': 'false' };
   expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([[element, scope]]);
   expect(element.cloneNode).toHaveBeenCalledWith(true);
+  element.cloneNode.mockClear();
+  scope = { 'toto': false };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
+  element.cloneNode.mockClear();
+  scope = { 'toto': {'a': 'b'} };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([[element, scope]]);
+  expect(element.cloneNode).toHaveBeenCalledWith(true);
+  element.cloneNode.mockClear();
+  scope = { 'toto': {} };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
+  element.cloneNode.mockClear();
+  scope = { 'toto': ['a', 'b'] };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([[element, scope]]);
+  expect(element.cloneNode).toHaveBeenCalledWith(true);
+  element.cloneNode.mockClear();
+  scope = { 'toto': [] };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
+  element.cloneNode.mockClear();
+  scope = { 'toto': new Map([['a', 'b']]) };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([[element, scope]]);
+  expect(element.cloneNode).toHaveBeenCalledWith(true);
+  element.cloneNode.mockClear();
+  scope = { 'toto': new Map() };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
+  element.cloneNode.mockClear();
+  scope = { 'toto': new Set(['a', 'b']) };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([[element, scope]]);
+  expect(element.cloneNode).toHaveBeenCalledWith(true);
+  element.cloneNode.mockClear();
+  scope = { 'toto': new Set() };
+  expect(b.renderTemplateBif(scope, element, 'toto')).toEqual([]);
+  expect(element.cloneNode).not.toHaveBeenCalled();
 });
 
 test("Bjs renderTemplateBfor", () => {
