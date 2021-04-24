@@ -1,0 +1,23 @@
+<html>
+<script src="../b0.js"></script>
+<script>
+function run(){
+    
+}
+
+
+function init(){
+  const evtSource = new EventSource("https://localhost:4200/resolution/api/status/event", { withCredentials: true } );
+  evtSource.onmessage = function(event) {
+    alert(event.data);
+  }
+}
+init();
+</script>
+
+<body>
+<button onclick="run()">run</button>
+
+
+</body>
+</html>
