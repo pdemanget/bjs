@@ -9,27 +9,29 @@ html(lang="en")
     form(onsubmit="return false")
       label(for="country") Your country:
       input(id="country" bbind="country" placeholder="Type here" title="Hit enter to add" onkeyup="addCountry(event)")
-    h2
-      | Your country is 
-      span(bval="country")
-    ul(class="country-list" bif="countries")
-      li.country(bfor="countries" battr="name=${$value.name}|id=country-${$index}|class=country removable")
-        span(bval="$index")
-        | . 
-        span(bval="$value.name")
-        span(style="padding-left: 1rem; cursor: pointer; user-select: none; color: red;" battr="data-index=${$index}" onclick="removeCountry(event)")
-          | × Remove
-        ul(class="zone-list")
-          li.zone(bfor="$value.zones")
-            span(bval="$value")
-            |  − test super, literal and filter: 
-            span(bval="$super.$value.name|add:': it%qs a tyranny!'|capitalize")
+      h2
+        | Your country is 
+        span(bval="country")
+      ul(class="country-list" bif="countries")
+        li.country(bfor="countries" battr="name=${$value.name}; id=country-${$index}; class=country removable")
+          span(bval="$index")
+          | . 
+          span(bval="$value.name|capitalize")
+          input(bbind="zone" placeholder="Add a zone" title="Hit enter to add" battr="data-countryindex=${$index}" onkeyup="addZone(event)")
+          span(style="padding-left: 1rem; cursor: pointer; user-select: none; color: red;" battr="data-index=${$index}" onclick="removeCountry(event)")
+            | × Remove
+          ul(class="zone-list")
+            li.zone(bfor="$value.zones")
+              span(bval="$value|capitalize")
+              |  − test super, literal and filter: 
+              span(bval="'in '|add:$super.$value.name|add:', it%qs beautiful!'")
+              span(style="padding-left: 1rem; cursor: pointer; user-select: none; color: red;" battr="data-countryindex=${$super.$index}; data-index=${$index}" onclick="removeZone(event)")
     script.
       function addCountry(event) {
         if (event.key == "Enter" && event.target.value) {
           const countryObj = {
             name: event.target.value,
-            zones: ['zone1', 'zone2', 'zone3'],
+            zones: [],
           }
           this.scope.countries.push(countryObj);
           this.scope.country = '';
@@ -40,9 +42,21 @@ html(lang="en")
         console.log(`country ${this.scope.countries[index]} removed`);
         this.scope.countries.splice(index, 1);
       }
+      function addZone(event) {
+        const countryIndex = event.target.dataset.countryindex;
+        if (event.key == "Enter" && event.target.value) {
+          this.scope.countries[countryIndex].zones.push(event.target.value);
+          this.scope.zone = '';
+        }
+      }
+      function removeZone(event) {
+        const countryIndex = event.target.dataset.countryindex;
+        const index = event.target.dataset.index;
+        this.scope.countries[countryIndex].zones.splice(index, 1);
+      }
       document.addEventListener(window.Bjs.READY_EVENT, (event) => {
         const b = event.detail;
-        for (let f of ['addCountry', 'removeCountry']) {
+        for (let f of ['addCountry', 'removeCountry', 'addZone', 'removeZone']) {
           window[f] = window[f].bind(b);
         }
         b.watchers.country.push((value, old) => console.log(`country: ${old} -> ${value}`)); 

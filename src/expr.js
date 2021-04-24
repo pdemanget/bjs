@@ -39,6 +39,8 @@
  *   SQUAREEXPR := "[" EXPRESSION "]" SUBSCOPE
  */
 import {
+  SUPER_ATTR,
+  SCOPE_NAME_ATTR,
   INST_ATTR,
 } from "./scope_common.js";
 
@@ -50,8 +52,8 @@ export class ValueException extends EvalError {
 
 export function getValueFromExpr(scope, expr) {
   let rootScope = scope;
-  while (rootScope.$super != null) {
-    rootScope = rootScope.$super;
+  while (rootScope[SUPER_ATTR] != null && rootScope[SCOPE_NAME_ATTR]) {
+    rootScope = rootScope[SUPER_ATTR];
   }
   const {
     nextScope,

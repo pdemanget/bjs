@@ -36,8 +36,7 @@ class Bjs extends Core {
     const bPluginEvent = new CustomEvent(this.constructor.PLUGIN_EVENT, { detail: this });
     this.doc.dispatchEvent(bPluginEvent);
     this._templates = this.createTemplates();
-    this.evaluateTemplates();
-    this.findBinds();
+    this.evaluateTemplates(this.scope);
     const bReadyEvent = new CustomEvent(this.constructor.READY_EVENT, { detail: this });
     this.doc.dispatchEvent(bReadyEvent);
   }
@@ -62,8 +61,7 @@ class Bjs extends Core {
 
   valueChangedEvent(scope, property, oldValue, newValue) {
     this.triggerWatchers(scope, property, oldValue, newValue);
-    this.evaluateTemplates();
-    this.applyValues(scope);
+    this.evaluateTemplates(scope);
   }
 
   triggerWatchers(scope, propertyName, oldValue, newValue) {
@@ -136,10 +134,12 @@ class Bjs extends Core {
     return templates.slice().reverse().filter(template => template.isConnected);
   }
 
-  evaluateTemplates() {
+  evaluateTemplates(scope) {
     for (let template of this._templates) {
-      this.evaluateTemplate(template, this.scope);
+      this.evaluateTemplate(template, scope);
     }
+    this.applyValues(scope);
+    this.findBinds(scope);
   }
 
   evaluateTemplate(template, scope) {
@@ -150,33 +150,36 @@ class Bjs extends Core {
     }
     const func = this.directives.get(directive);
     if (func) {
-      const results = func.call(this, scope, template.content.firstChild, expr, directive);
-      // remove previously inserted elements
-      for (let i = 0; i < template.nbElts; i++) {
-        template.nextSibling && template.nextSibling.remove();
-      }
-      template.nbElts = 0;
-      if (results && results.length) {
-        for (let result of results) {
-          const [element, localScope] = result;
-          // render recursively any sub template of each element
-          for (let subTemplate of element.querySelectorAll('template')) {
-            if (subTemplate.getAttribute('type') == 'bjs') {
-              this.evaluateTemplate(subTemplate, localScope);
+      const res = func.call(this, scope, template.content.firstChild, expr, template.prevEval, directive);
+      template.prevEval = res.varValue;
+      if (res.dom != null) {
+        // remove previously inserted elements
+        for (let i = 0; i < template.nbElts; i++) {
+          template.nextSibling && template.nextSibling.remove();
+        }
+        template.nbElts = 0;
+        if (res.dom.length) {
+          for (let oneDom of res.dom) {
+            const [element, localScope] = oneDom;
+            // render recursively any sub template of each element
+            for (let subTemplate of element.querySelectorAll('template')) {
+              if (subTemplate.getAttribute('type') == 'bjs') {
+                this.evaluateTemplate(subTemplate, localScope);
+              }
             }
           }
+          template.after(...res.dom.map(res => res[0]));
+          template.nbElts = res.dom.length;
         }
-        template.after(...results.map(res => res[0]));
-        template.nbElts = results.length;
       }
     } else {
       console.error(`function is not defined for directive ${directive}`);
     }
   }
 
-  findBinds(doc, scope) {
+  findBinds(scope) {
     const selector = `* [${this.constructor.BIND_ATTR}]`;
-    for (let elt of (doc || this.doc).querySelectorAll(selector)) {
+    for (let elt of scope[EL_ATTR].querySelectorAll(selector)) {
       const varName = elt.getAttribute(this.constructor.BIND_ATTR)
       if (varName) {
         if (varName.indexOf('.') != -1 || varName.indexOf('[') != -1) {

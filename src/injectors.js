@@ -21,7 +21,7 @@ Core.registerInjector('bval', injectorBval);
 
 export function injectorBattr(scope, element, varExpr, injector) {
   let battrValues = [];
-  const exprAttrs = (varExpr || '').split('|');
+  const exprAttrs = (varExpr || '').split(';').map(expr => expr.trimStart());
   if (!exprAttrs[0]) {
     exprAttrs.shift();
   }

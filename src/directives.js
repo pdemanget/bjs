@@ -5,8 +5,11 @@ import {
   getValueFromExpr,
 } from "./expr.js";
 
-export function directiveBif(scope, element, varExpr, directive) {
-  const res = [];
+export function directiveBif(scope, element, varExpr, prevEval, directive) {
+  const res = {
+    varValue: null,
+    dom: [],
+  };
   let value;
   try {
     value = getValueFromExpr(scope, varExpr);
@@ -19,22 +22,31 @@ export function directiveBif(scope, element, varExpr, directive) {
   } else if (value instanceof Array || (value instanceof Object && value.constructor.entries)) {
     value = Object.entries(value).length;
   }
-  if (value) {
-    res.push([element.cloneNode(true), scope]);
+  res.varValue = value;
+  if (value === prevEval) {
+    res.dom = null;
+  } else if (value) {
+    res.dom.push([element.cloneNode(true), scope]);
   }
   return res;
 }
 Core.registerDirective('bif', directiveBif);
 
-export function directiveBfor(scope, element, varExpr, directive) {
-  const res = [];
+export function directiveBfor(scope, element, varExpr, prevEval, directive) {
+  const res = {
+    varValue: null,
+    dom: [],
+  };
   let iterable;
   try {
     iterable = getValueFromExpr(scope, varExpr);
   } catch(e) {
     iterable = null;
   }
-  if (iterable && iterable.entries) {
+  res.varValue = iterable;
+  if (iterable === prevEval) {
+    res.dom = null;
+  } else if (iterable && iterable.entries) {
     for (let entry of iterable.entries()) {
       const oneElt = element.cloneNode(true);
       const localScope = this.createScope(oneElt, {
@@ -42,7 +54,7 @@ export function directiveBfor(scope, element, varExpr, directive) {
         "$value": entry[1],
       }, scope);
       this.applyValues(localScope);
-      res.push([oneElt, localScope]);
+      res.dom.push([oneElt, localScope]);
     }
   }
   return res;

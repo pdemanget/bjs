@@ -27,8 +27,9 @@ setStaticProperty(Core, 'filters', new Map());
 setStaticFunction(Core, 'registerInjector', function (name, fct) {
   this.injectors.set(name, fct);
 });
-// each function takes: scope, element, varExpr, directive
-// each function should return an array of [newDomElement, scope]
+// each function takes: scope, element, varExpr, prevEval, directive
+// each function should return an object with {varValue, dom: [[newDomElement, localScope], …]}
+//   if dom is null, that means no change
 setStaticFunction(Core, 'registerDirective', function (name, fct) {
   this.directives.set(name, fct);
 });
