@@ -1,4 +1,9 @@
 import {
+  Core,
+  setStaticProperty,
+  setStaticFunction,
+} from "./core.js";
+import {
   createProxy,
 } from "./proxy.js";
 import {
@@ -9,30 +14,22 @@ import {
 import {
   createScope,
 } from "./scope.js";
-import {
-  getValueFromExpr,
-} from "./expr.js";
-import {
-  addFilter,
-  upperFilter,
-  lowerFilter,
-  capitalizeFilter,
-  trimFilter,
-} from "./filters.js";
+import * as injectors from "./injectors.js";
+import * as directives from "./directives.js";
+import * as filters from "./filters.js";
 
 /*
  * BJS framework
  */
-class Bjs {
+class Bjs extends Core {
   constructor(doc) {
+    super();
     if (!doc) {
       // try document
       doc = document;
     }
     this.doc = doc;
-    this.injectors = this.constructor.findInjectors();
-    this.directives = this.constructor.findDirectives();
-    this.filters = this.constructor.findFilters();
+    Core.registerInjector(this.constructor.BIND_ATTR, injectors.injectorBval);
     this.scope = this.createScope();
     this.watchers = this.createWatchers();
     // allow plugins to modify Bjs
@@ -114,6 +111,9 @@ class Bjs {
   }
 
   createTemplates() {
+    if (this.directives.size == 0) {
+      return [];
+    }
     const selector = [...this.directives.keys()].map(directive => `* [${directive}]`).join(', ');
     const templates = [];
     for (let elt of [...this.doc.querySelectorAll(selector)].reverse()) {
@@ -212,162 +212,21 @@ class Bjs {
 }
 
 /* static properties and methods */
-Bjs.PLUGIN_EVENT = 'bplugin';
-Bjs.READY_EVENT = 'bready';
-Bjs.BLOAD_ATTR = 'bload';
-Bjs.BIND_ATTR = 'bbind';
+setStaticProperty(Bjs, 'PLUGIN_EVENT', 'bplugin');
+setStaticProperty(Bjs, 'READY_EVENT', 'bready');
+setStaticProperty(Bjs, 'BLOAD_ATTR', 'bload');
+setStaticProperty(Bjs, 'BIND_ATTR', 'bbind');
 
-Bjs.findInjectors = function() {
-  // each function takes: scope, element, varExpr, injector
-  // each function return value is ignored
-  return new Map([
-    [this.BIND_ATTR, this.injectBval],
-    ['bval', this.injectBval],
-    ['battr', this.injectBattr],
-  ]);
-}.bind(Bjs);
+setStaticFunction(Bjs, 'getCssDirectivesRule', function() {
+  return Core.directives.size ? ([...Core.directives.keys()].map(bdir => `* [${bdir}]`).join(', ') + '{ display: none; }') : '';
+});
 
-Bjs.injectBval = function(scope, element, varExpr, injector) {
-  try {
-    const value = getValueFromExpr(scope, varExpr);
-    if (element.type) {
-      element.value = value === undefined ? '' : value;
-    } else {
-      element.innerText = value === undefined ? '' : value;
-    }
-  } catch (e) {
-    // this could be normal to have an evaluated expression that fails
-  }
-};
-
-
-Bjs.injectBattr = function(scope, element, varExpr, injector) {
-  let battrValues = [];
-  const exprAttrs = (varExpr || '').split('|');
-  if (!exprAttrs[0]) {
-    exprAttrs.shift();
-  }
-  const attrs = [];
-  const r = /\$\{([^}]+)\}(.*)/;
-  let error = false;
-  for (let i = 0; i < exprAttrs.length; i++) {
-    let exprAttr = exprAttrs[i];
-    if (!exprAttr.includes('=')) {
-      error = true;
-      break;
-    }
-    let m = exprAttr.match(new RegExp(r));
-    attrs[i] = '';
-    while (m) {
-      if (m.index) {
-        attrs[i] += exprAttr.substring(0, m.index);
-      }
-      try {
-        const value = getValueFromExpr(scope, m[1]);
-        attrs[i] += value === undefined || value == null ? '' : value;
-      } catch (e) {
-        // nothing is generated in that case
-        error = true;
-        break;
-      }
-      exprAttr = m[2];
-      m = exprAttr.match(new RegExp(r));
-    }
-    if (error) {
-      break;
-    }
-    if (exprAttr) {
-      attrs[i] += exprAttr;
-    }
-  }
-  if (error) {
-    battrValues = [];
-  } else {
-    battrValues = attrs.map(attr => {
-      const eqPos = attr.indexOf('=');
-      return [attr.substring(0, eqPos), attr.substring(eqPos + 1)];
-    });
-  }
-  for (const [attr, value] of battrValues) {
-    element.setAttribute(attr, value);
-  }
-};
-
-Bjs.findDirectives = function() {
-  // each function takes: scope, element, varExpr, directive
-  // each function should return an array of [newDomElement, scope]
-  return new Map([
-    ['bif', this.directiveBif],
-    ['bfor', this.directiveBfor],
-  ]);
-}.bind(Bjs);
-
-Bjs.directiveBif = function(scope, element, varExpr, directive) {
-  const res = [];
-  let value;
-  try {
-    value = getValueFromExpr(scope, varExpr);
-  } catch(e) {
-    value = false;
-  }
-  // ensure empty array, object, map or set are considered falsy
-  if (value instanceof Map || value instanceof Set) {
-    value = value.size;
-  } else if (value instanceof Array || (value instanceof Object && value.constructor.entries)) {
-    value = Object.entries(value).length;
-  }
-  if (value) {
-    res.push([element.cloneNode(true), scope]);
-  }
-  return res;
-}
-
-Bjs.directiveBfor = function(scope, element, varExpr, directive) {
-  const res = [];
-  let iterable;
-  try {
-    iterable = getValueFromExpr(scope, varExpr);
-  } catch(e) {
-    iterable = null;
-  }
-  if (iterable && iterable.entries) {
-    for (let entry of iterable.entries()) {
-      const oneElt = element.cloneNode(true);
-      const localScope = this.createScope(oneElt, {
-        "$index": entry[0],
-        "$value": entry[1],
-      }, scope);
-      this.applyValues(localScope);
-      res.push([oneElt, localScope]);
-    }
-  }
-  return res;
-}
-
-Bjs.findFilters = function() {
-  return new Map([
-    ['add', addFilter],
-    ['upper', upperFilter],
-    ['lower', lowerFilter],
-    ['capitalize', capitalizeFilter],
-    ['trim', trimFilter],
-  ]);
-}.bind(Bjs);
-
-Bjs.getCssDirectivesRule = function() {
-  const rules = [];
-  for (const bdir of this.findDirectives().keys()) {
-    rules.push(`* [${bdir}]`);
-  }
-  return rules.join(', ') + '{ display: none; }';
-}.bind(Bjs);
-
-Bjs.load = function(doc, cb) {
+setStaticFunction(Bjs, 'load', function(doc, cb) {
   const b = new this(doc);
   if (cb && typeof cb == 'function') {
     cb(b);
   }
-}.bind(Bjs);
+});
 
 const isBrowser = new Function("try{return this===window;}catch(e){return false;}");
 const isNode = new Function("try{return this===global;}catch(e){return false;}");
@@ -375,19 +234,20 @@ const isNode = new Function("try{return this===global;}catch(e){return false;}")
 if (isBrowser && isNode) {
   if (isBrowser) {
     window.Bjs = Bjs;
-    const bcss = document.createElement('style');
-    bcss.type = 'text/css'
-    bcss.rel = 'stylesheet'
-    document.head.appendChild(bcss);
-    bcss.sheet.insertRule(Bjs.getCssDirectivesRule(), 0);
-    if (document) {
-      document.addEventListener('DOMContentLoaded', () => {
-        if (document.body.hasAttribute(Bjs.BLOAD_ATTR)) {
-          document.body.removeAttribute(Bjs.BLOAD_ATTR);
-          Bjs.load(document);
-        }
-      });
+    const cssDirectives = Bjs.getCssDirectivesRule();
+    if (cssDirectives) {
+      const bcss = document.createElement('style');
+      bcss.type = 'text/css'
+      bcss.rel = 'stylesheet'
+      document.head.appendChild(bcss);
+      bcss.sheet.insertRule(Bjs.getCssDirectivesRule(), 0);
     }
+    document.addEventListener('DOMContentLoaded', () => {
+      if (document.body.hasAttribute(Bjs.BLOAD_ATTR)) {
+        document.body.removeAttribute(Bjs.BLOAD_ATTR);
+        Bjs.load(document);
+      }
+    });
   } else if (isNode) {
     global.Bjs = Bjs;
   }

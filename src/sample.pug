@@ -8,7 +8,7 @@ html(lang="en")
     h1= htmlWebpackPlugin.options.title
     form(onsubmit="return false")
       label(for="country") Your country:
-      input(id="country" bbind="country" placeholder="Type here" title="Ends with + or hit enter to add" onkeyup="addCountry(event)")
+      input(id="country" bbind="country" placeholder="Type here" title="Hit enter to add" onkeyup="addCountry(event)")
     h2
       | Your country is 
       span(bval="country")
@@ -17,7 +17,7 @@ html(lang="en")
         span(bval="$index")
         | . 
         span(bval="$value.name")
-        span(style="padding-left: 1rem; cursor: pointer; user-select: none; color: red;" onclick="removeCountry(this.parentNode.querySelector('span').innerText)")
+        span(style="padding-left: 1rem; cursor: pointer; user-select: none; color: red;" battr="data-index=${$index}" onclick="removeCountry(event)")
           | × Remove
         ul(class="zone-list")
           li.zone(bfor="$value.zones")
@@ -25,35 +25,27 @@ html(lang="en")
             |  − test super, literal and filter: 
             span(bval="$super.$value.name|add:': it%qs a tyranny!'|capitalize")
     script.
-      document.addEventListener('bready', (event) => {
-        const b = event.detail;
-        b.watchers.country.push((value, old) => console.log(`country: ${old} -> ${value}`)); 
-        b.watchers.country.push(value => {
-          if (value.match(/^.+\+$/)) {
-            const country = value.substring(0, value.length - 1);
-            console.log(`country ${country} added`);
-            const countryObj = {
-              country,
-              zones: ['zone1', 'zone2', 'zone3'],
-            };
-            b.scope.countries.push(countryObj);
-            b.scope.country = '';
+      function addCountry(event) {
+        if (event.key == "Enter" && event.target.value) {
+          const countryObj = {
+            name: event.target.value,
+            zones: ['zone1', 'zone2', 'zone3'],
           }
-        }); 
+          this.scope.countries.push(countryObj);
+          this.scope.country = '';
+        }
+      }
+      function removeCountry(event) {
+        const index = event.target.dataset.index;
+        console.log(`country ${this.scope.countries[index]} removed`);
+        this.scope.countries.splice(index, 1);
+      }
+      document.addEventListener(window.Bjs.READY_EVENT, (event) => {
+        const b = event.detail;
+        for (let f of ['addCountry', 'removeCountry']) {
+          window[f] = window[f].bind(b);
+        }
+        b.watchers.country.push((value, old) => console.log(`country: ${old} -> ${value}`)); 
         b.watchers.countries.push((value, old) => console.log(`countries: ${old} -> ${value}`)); 
         b.scope.countries = [];
-        window.addCountry = function(event) {
-          if (event.key == "Enter" && event.target.value) {
-            const countryObj = {
-              name: event.target.value,
-              zones: ['zone1', 'zone2', 'zone3'],
-            }
-            b.scope.countries.push(countryObj);
-            b.scope.country = '';
-          }
-        }
-        window.removeCountry = function(index) {
-          console.log(`country ${b.scope.countries[index]} removed`);
-          b.scope.countries.splice(index, 1);
-        };
       });
