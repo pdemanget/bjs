@@ -1,21 +1,19 @@
 import {
-  createProxy,
-} from "./proxy.js";
-import {
-  hasFct,
-  getFct,
+  createScopeProxy,
+  EL_ATTR,
 } from "./scope_common.js";
 
-export function createSetProxy(bInstance, valueChangedEvent, obj, ownProp, superScope) {
+export function createSetProxy(bInstance, valueChangedEvent, obj, ownProp, superScope, createRecursiveScope) {
   const origSetAdd = obj.add;
   const setAddFct = proxy => function(value) {
-    if (!obj.has(value)) {
+    const proxifiedValue = createRecursiveScope(bInstance, superScope && superScope[EL_ATTR], valueChangedEvent, value, 'set', proxy);
+    if (!obj.has(proxifiedValue)) {
       const old = new Set(obj.values());
-      const ret = origSetAdd.call(obj, value);
+      const ret = origSetAdd.call(obj, proxifiedValue);
       valueChangedEvent(superScope, ownProp, old, obj);
       return ret;
     } else {
-      return origSetAdd.call(obj, value);
+      return origSetAdd.call(obj, proxifiedValue);
     }
   }
   const origSetClear = obj.clear;
@@ -40,9 +38,8 @@ export function createSetProxy(bInstance, valueChangedEvent, obj, ownProp, super
       return origSetDelete.call(obj, value);
     }
   };
-  const scope = createProxy(obj, {
-    has: hasFct(superScope),
-    get: getFct(bInstance, superScope, ownProp, null, (target, prop, receiver) => {
+  const proxy = createScopeProxy(bInstance, superScope, ownProp, null, obj, {
+    get(target, prop, receiver) {
       if (prop == 'add') {
         return setAddFct(receiver);
       } else if (prop == 'clear') {
@@ -56,7 +53,14 @@ export function createSetProxy(bInstance, valueChangedEvent, obj, ownProp, super
         }
         return value;
       }
-    }),
+    },
   });
-  return scope;
+  for (const value of obj.values()) {
+    const proxifiedValue = createRecursiveScope(bInstance, superScope && superScope[EL_ATTR], valueChangedEvent, value, 'set', proxy);
+    if (value != proxifiedValue) {
+      obj.delete(value);
+      obj.add(proxifiedValue);
+    }
+  }
+  return proxy;
 }

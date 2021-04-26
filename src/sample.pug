@@ -26,6 +26,9 @@ html(lang="en")
               |  − test super, literal and filter: 
               span(bval="'in '|add:$super.$value.name|add:', it%qs beautiful!'")
               span(style="padding-left: 1rem; cursor: pointer; user-select: none; color: red;" battr="data-countryindex=${$super.$index}; data-index=${$index}" onclick="removeZone(event)")
+                | × Remove
+      span(belse)
+        | No country yet
     script.
       function addCountry(event) {
         if (event.key == "Enter" && event.target.value) {
@@ -46,7 +49,7 @@ html(lang="en")
         const countryIndex = event.target.dataset.countryindex;
         if (event.key == "Enter" && event.target.value) {
           this.scope.countries[countryIndex].zones.push(event.target.value);
-          this.scope.zone = '';
+          // this.scope.zone = '';
         }
       }
       function removeZone(event) {

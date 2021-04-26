@@ -28,15 +28,18 @@ export function proxyGetOwnPropertyDescriptorFunction(target, prop) {
   return Reflect.getOwnPropertyDescriptor(target, prop);
 }
 
+export function proxyToString() {
+  return `[Proxy] ${JSON.stringify(this, null, 2)}`;
+}
+
 export function createProxy(obj, overrides) {
   const realOverrides = {...(overrides || {})};
   const hasFct = realOverrides.has || proxyHasFunction;
   delete realOverrides.has;
   const getFct = realOverrides.get || proxyGetFunction;
   delete realOverrides.get;
-  const toStringFct = function() {
-    return `[Proxy] ${JSON.stringify(this, null, 2)}`;
-  };
+  const toStringFct = realOverrides.toStringFct || proxyToString;
+  delete realOverrides.toStringFct;
   const handler = Object.assign({
     has(target, prop) {
       return prop == IS_PROXY_ATTR || prop == 'toString' || hasFct(target, prop);

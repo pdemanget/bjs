@@ -1,5 +1,4 @@
 import {
-  createProxy,
   IS_PROXY_ATTR,
 } from "./proxy.js";
 import {
@@ -30,11 +29,11 @@ export function createRecursiveScope(bInstance, domElement, valueChangedEvent, o
     if (isNotProcessedObject(obj)) {
       return obj;
     } else if (obj instanceof Array) {
-      return createArrayProxy(bInstance, valueChangedEvent, obj, ownProp, superScope);
+      return createArrayProxy(bInstance, valueChangedEvent, obj, ownProp, superScope, createRecursiveScope);
     } else if (obj instanceof Map) {
-      return createMapProxy(bInstance, valueChangedEvent, obj, ownProp, superScope);
+      return createMapProxy(bInstance, valueChangedEvent, obj, ownProp, superScope, createRecursiveScope);
     } else if (obj instanceof Set) {
-      return createSetProxy(bInstance, valueChangedEvent, obj, ownProp, superScope);
+      return createSetProxy(bInstance, valueChangedEvent, obj, ownProp, superScope, createRecursiveScope);
     } else {
       return createObjectProxy(bInstance, valueChangedEvent, obj, ownProp, superScope, domElement, createRecursiveScope);
     }

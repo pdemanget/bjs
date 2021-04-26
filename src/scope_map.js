@@ -1,17 +1,15 @@
 import {
-  createProxy,
-} from "./proxy.js";
-import {
-  hasFct,
-  getFct,
+  createScopeProxy,
+  EL_ATTR,
 } from "./scope_common.js";
 
-export function createMapProxy(bInstance, valueChangedEvent, obj, ownProp, superScope) {
+export function createMapProxy(bInstance, valueChangedEvent, obj, ownProp, superScope, createRecursiveScope) {
   const origMapSet = obj.set;
   const mapSetFct = proxy => function(key, value) {
-    if (obj.get(key) != value) {
+    const proxifiedValue = createRecursiveScope(bInstance, superScope && superScope[EL_ATTR], valueChangedEvent, value, key, proxy);
+    if (obj.get(key) != proxifiedValue) {
       const old = new Map(obj.entries());
-      const ret = origMapSet.call(obj, key, value);
+      const ret = origMapSet.call(obj, key, proxifiedValue);
       valueChangedEvent(superScope, ownProp, old, obj);
       return ret;
     } else {
@@ -40,9 +38,8 @@ export function createMapProxy(bInstance, valueChangedEvent, obj, ownProp, super
       return origMapDelete.call(obj, key);
     }
   };
-  const scope = createProxy(obj, {
-    has: hasFct(superScope),
-    get: getFct(bInstance, superScope, ownProp, null, (target, prop, receiver) => {
+  const proxy = createScopeProxy(bInstance, superScope, ownProp, null, obj, {
+    get(target, prop, receiver) {
       if (prop == 'set') {
         return mapSetFct(receiver);
       } else if (prop == 'clear') {
@@ -56,7 +53,13 @@ export function createMapProxy(bInstance, valueChangedEvent, obj, ownProp, super
         }
         return value;
       }
-    }),
+    },
   });
-  return scope;
+  for (const [key, value] of obj.entries()) {
+    const proxifiedValue = createRecursiveScope(bInstance, superScope && superScope[EL_ATTR], valueChangedEvent, value, key, proxy);
+    if (value != proxifiedValue) {
+      obj.set(key, proxifiedValue);
+    }
+  }
+  return proxy;
 }

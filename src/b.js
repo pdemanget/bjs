@@ -59,9 +59,40 @@ class Bjs extends Core {
     });
   }
 
+  createTemplates() {
+    if (this.directives.size == 0) {
+      return [];
+    }
+    const selector = [...this.directives.keys()].map(directive => `* [${directive}]`).join(', ');
+    const templates = [];
+    for (let elt of [...this.doc.querySelectorAll(selector)].reverse()) {
+      const eltCloned = elt.cloneNode(true);
+      const template = this.doc.createElement('template');
+      template.setAttribute('type', 'bjs');
+      for (const directive of this.directives.keys()) {
+        if (eltCloned.hasAttribute(directive)) {
+          template.setAttribute('directive', directive);
+          template.setAttribute('expr', eltCloned.getAttribute(directive));
+          eltCloned.removeAttribute(directive);
+          break;
+        }
+      }
+      template.content.appendChild(eltCloned);
+      elt.replaceWith(template);
+      template.nbElts = 0;
+      templates.push(template);
+    }
+    return templates.slice().reverse();
+  }
+
   valueChangedEvent(scope, property, oldValue, newValue) {
+    // console.trace(`valueChangedEvent ${scope}`, scope[EL_ATTR], property, oldValue, newValue);
     this.triggerWatchers(scope, property, oldValue, newValue);
-    this.evaluateTemplates(scope);
+    let rootScope = scope;
+    while (rootScope[SUPER_ATTR] != null && rootScope[SCOPE_NAME_ATTR]) {
+      rootScope = rootScope[SUPER_ATTR];
+    }
+    this.evaluateTemplates(rootScope);
   }
 
   triggerWatchers(scope, propertyName, oldValue, newValue) {
@@ -96,53 +127,21 @@ class Bjs extends Core {
     }
   }
 
-  applyValues(scope) {
-    const domElement = scope[EL_ATTR];
-    for (const [injector, func] of this.injectors.entries()) {
-      if (func) {
-        const ownElement = domElement.hasAttribute && domElement.hasAttribute(injector) ? [domElement] : [];
-        for (let elt of [...ownElement, ...domElement.querySelectorAll(`* [${injector}]`)]) {
-          func.call(this, scope, elt, elt.getAttribute(injector), injector);
-        }
-      }
-    }
-  }
-
-  createTemplates() {
-    if (this.directives.size == 0) {
-      return [];
-    }
-    const selector = [...this.directives.keys()].map(directive => `* [${directive}]`).join(', ');
-    const templates = [];
-    for (let elt of [...this.doc.querySelectorAll(selector)].reverse()) {
-      const eltCloned = elt.cloneNode(true);
-      const template = this.doc.createElement('template');
-      template.setAttribute('type', 'bjs');
-      for (const directive of this.directives.keys()) {
-        if (eltCloned.hasAttribute(directive)) {
-          template.setAttribute('directive', directive);
-          template.setAttribute('expr', eltCloned.getAttribute(directive));
-          eltCloned.removeAttribute(directive);
-          break;
-        }
-      }
-      template.content.appendChild(eltCloned);
-      elt.replaceWith(template);
-      template.nbElts = 0;
-      templates.push(template);
-    }
-    return templates.slice().reverse().filter(template => template.isConnected);
-  }
-
   evaluateTemplates(scope) {
-    for (let template of this._templates) {
+    const connectedTemplates = this._templates.filter(template => template.isConnected);
+    console.log(`${connectedTemplates.length} templates connected`);
+    for (const template of connectedTemplates) {
       this.evaluateTemplate(template, scope);
     }
     this.applyValues(scope);
     this.findBinds(scope);
   }
 
-  evaluateTemplate(template, scope) {
+  evaluateTemplate(template, scope, nb=1) {
+    if (nb == 10) {
+      console.log("Max recursion of 10");
+      return;
+    }
     const directive = template.getAttribute('directive');
     const expr = template.getAttribute('expr');
     if (!directive || !expr) {
@@ -152,28 +151,46 @@ class Bjs extends Core {
     if (func) {
       const res = func.call(this, scope, template.content.firstChild, expr, template.prevEval, directive);
       template.prevEval = res.varValue;
-      if (res.dom != null) {
+      console.log(`template ${directive} expr=${expr} will${res.toRender ? '' : ' NOT'} be rendered`);
+      console.log(`  ${res.elts.length} DOM elements`);
+      if (res.toRender) {
         // remove previously inserted elements
         for (let i = 0; i < template.nbElts; i++) {
           template.nextSibling && template.nextSibling.remove();
         }
-        template.nbElts = 0;
-        if (res.dom.length) {
-          for (let oneDom of res.dom) {
-            const [element, localScope] = oneDom;
-            // render recursively any sub template of each element
-            for (let subTemplate of element.querySelectorAll('template')) {
-              if (subTemplate.getAttribute('type') == 'bjs') {
-                this.evaluateTemplate(subTemplate, localScope);
-              }
+      }
+      template.nbElts = res.elts.length;
+      if (template.nbElts) {
+        console.log(`  subelements`, res.elts);
+        for (const elt of res.elts) {
+          const [element, localScope] = elt;
+          // render recursively any sub template of each element
+          for (const subTemplate of element.querySelectorAll('template')) {
+            if (subTemplate.getAttribute('type') == 'bjs') {
+              this.evaluateTemplate(subTemplate, localScope, nb + 1);
             }
           }
-          template.after(...res.dom.map(res => res[0]));
-          template.nbElts = res.dom.length;
+        }
+        if (res.toRender) {
+          console.log(`  adding subelements to the DOM after the template`);
+          template.after(...res.elts.map(x => x[0]));
         }
       }
+      this.applyValues(scope);
     } else {
       console.error(`function is not defined for directive ${directive}`);
+    }
+  }
+
+  applyValues(scope) {
+    const domElement = scope[EL_ATTR];
+    for (const [injector, func] of this.injectors.entries()) {
+      if (func) {
+        const ownElement = domElement.hasAttribute && domElement.hasAttribute(injector) ? [domElement] : [];
+        for (let elt of [...ownElement, ...domElement.querySelectorAll(`* [${injector}]`)]) {
+          func.call(this, scope, elt, elt.getAttribute(injector), injector);
+        }
+      }
     }
   }
 

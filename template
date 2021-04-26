@@ -1,0 +1,102 @@
+Qu’est-ce qu’un template ?
+
+
+un ensemble de DOM elements qui produit 0 ou plusieurs DOM elements placés après lui
+
+Pug originel:
+tag1(bif="cond")
+tag2(belif="otherCond")
+tag3(belse)
+tag4
+
+Pug avec le template:
+template(type="bjs" directive="bif")
+  tag1(bif="cond")
+  tag2(belif="otherCond")
+  tag3(belse)
+tag4
+
+Rendu avec cond True:
+template(type="bjs" directive="bif")
+  tag1(bif="cond")
+  tag2(belif="otherCond")
+  tag3(belse)
+tag1
+tag4
+
+Rendu avec otherCond True:
+template(type="bjs" directive="bif")
+  tag1(bif="cond")
+  tag2(belif="otherCond")
+  tag3(belse)
+tag2
+tag4
+
+Rendu avec rien de True:
+template(type="bjs" directive="bif")
+  tag1(bif="cond")
+  tag2(belif="otherCond")
+  tag3(belse)
+tag3
+tag4
+
+-----------------------
+
+Pug originel:
+tag1(bfor="iterable")
+tag2(belse)
+tag3
+
+Pug avec le template:
+template(type="bjs" directive="bfor")
+  tag1(bfor="iterable")
+  tag2(belse)
+tag3
+
+Rendu avec iterable=[1,2]:
+template(type="bjs" directive="bfor")
+  tag1(bfor="iterable")
+  tag2(belse)
+tag1 $index=0 $value=1
+tag1 $index=1 $value=2
+tag3
+
+-----------------------
+
+Pug originel:
+tag1(bfor="iter1")
+  tag2(bfor="$value.iter2")
+
+Pug avec le template:
+template(type="bjs" directive="bfor")
+  tag1(bfor="iter1")
+    template(type="bjs" directive="bfor")
+      tag2(bfor="iter2")
+
+Rendu avec iter1=[{iter2: [1 ,2]}, {iter2: [3, 4]}]:
+template(type="bjs" directive="bfor") => enregistrement de la valeur évaluée
+  tag1(bfor="iter1")
+    template(type="bjs" directive="bfor")
+      tag2(bfor="iter2")
+tag1 $index=0 $value={iter2: [1, 2]}
+  template(type="bjs" directive="bfor") => enr value
+    tag2(bfor="iter2")
+tag1 $index=1 $value={iter2: [3, 4]}
+  template(type="bjs" directive="bfor") => enr value
+    tag2(bfor="iter2")
+… qui va donner:
+
+template(type="bjs" directive="bfor") => enr value
+  tag1(bfor="iter1")
+    template(type="bjs" directive="bfor")
+      tag2(bfor="iter2")
+tag1 $index=0 $value={iter2: [1, 2]}
+  template(type="bjs" directive="bfor") => enr value
+    tag2(bfor="iter2")
+  tag2 $index=0 $value=1
+  tag2 $index=1 $value=2
+tag1 $index=1 $value={iter2: [3, 4]}
+  template(type="bjs" directive="bfor") => enr value
+    tag2(bfor="iter2")
+  tag2 $index=0 $value=3
+  tag2 $index=1 $value=4

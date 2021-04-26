@@ -1,3 +1,7 @@
+import {
+  createProxy,
+} from "./proxy.js";
+
 export const SCOPE_NAME_ATTR = "$bjs:name";
 export const EL_ATTR = "$bjs:el";
 export const INST_ATTR = "$bjs:b";
@@ -28,3 +32,11 @@ export const getFct = (bInstance, superScope, scopeName, domElement, extendedGet
     return extendedGetFct ? extendedGetFct(target, prop, receiver) : target[prop];
   }
 };
+export function createScopeProxy(bInstance, superScope, scopeName, domElement, obj, overrides) {
+  overrides.toStringFct = function() {
+    return `[Scope name=${this[SCOPE_NAME_ATTR]}, ${SUPER_ATTR in this ? '↑' : '—'}] ${JSON.stringify(this, null, 2)}`;
+  };
+  overrides.has = hasFct(superScope, overrides.has);
+  overrides.get = getFct(bInstance, superScope, scopeName, domElement, overrides.get);
+  return createProxy(obj, overrides);
+}

@@ -1,26 +1,25 @@
 import {
-  createProxy,
-} from "./proxy.js";
-import {
-  hasFct,
-  getFct,
+  createScopeProxy,
+  EL_ATTR,
 } from "./scope_common.js";
 
-export function createArrayProxy(bInstance, valueChangedEvent, obj, ownProp, superScope) {
+export function createArrayProxy(bInstance, valueChangedEvent, obj, ownProp, superScope, createRecursiveScope) {
   const origArrPush = obj.push;
   const arrPushFct = proxy => function(...values) {
+    const proxifiedValues = values.map(value => createRecursiveScope(bInstance, superScope && superScope[EL_ATTR], valueChangedEvent, value, 'lst', proxy));
     const old = [...obj];
-    const ret = origArrPush.apply(obj, values);
-    if (values.length) {
+    const ret = origArrPush.apply(obj, proxifiedValues);
+    if (proxifiedValues.length) {
       valueChangedEvent(superScope, ownProp, old, obj);
     }
     return ret;
   };
   const origArrUnshift = obj.unshift;
   const arrUnshiftFct = proxy => function(...values) {
+    const proxifiedValues = values.map(value => createRecursiveScope(bInstance, superScope && superScope[EL_ATTR], valueChangedEvent, value, 'lst', proxy));
     const old = [...obj];
-    const ret = origArrUnshift.apply(obj, values);
-    if (values.length) {
+    const ret = origArrUnshift.apply(obj, proxifiedValues);
+    if (proxifiedValues.length) {
       valueChangedEvent(superScope, ownProp, old, obj);
     }
     return ret;
@@ -44,15 +43,31 @@ export function createArrayProxy(bInstance, valueChangedEvent, obj, ownProp, sup
     return ret;
   };
   const origArrFill = obj.fill;
-  const arrFillFct = proxy => function(...args) {
+  const arrFillFct = proxy => function(value, start, end) {
+    const proxifiedValue = createRecursiveScope(bInstance, superScope && superScope[EL_ATTR], valueChangedEvent, value, 'lst', proxy);
     const old = [...obj];
-    const ret = origArrFill.apply(obj, args);
+    const args = [proxifiedValue];
+    if (start) {
+      args.push(start);
+    }
+    if (end) {
+      args.push(end);
+    }
+    const ret = origArrFill.call(obj, args);
     valueChangedEvent(superScope, ownProp, old, obj);
     return ret;
   };
   const origArrSplice = obj.splice;
-  const arrSpliceFct = proxy => function(...args) {
+  const arrSpliceFct = proxy => function(start, deleteCount, ...values) {
+    const proxifiedValues = values.map(value => createRecursiveScope(bInstance, superScope && superScope[EL_ATTR], valueChangedEvent, value, 'lst', proxy));
     const old = [...obj];
+    const args = [start];
+    if (deleteCount) {
+      args.push(deleteCount);
+    }
+    if (proxifiedValues) {
+      args.push(...proxifiedValues);
+    }
     const ret = origArrSplice.apply(obj, args);
     valueChangedEvent(superScope, ownProp, old, obj);
     return ret;
@@ -71,9 +86,8 @@ export function createArrayProxy(bInstance, valueChangedEvent, obj, ownProp, sup
     valueChangedEvent(superScope, ownProp, old, obj);
     return ret;
   };
-  const scope = createProxy(obj, {
-    has: hasFct(superScope),
-    get: getFct(bInstance, superScope, ownProp, null, (target, prop, receiver) => {
+  const proxy = createScopeProxy(bInstance, superScope, ownProp, null, obj, {
+    get(target, prop, receiver) {
       if (prop == 'push') {
         return arrPushFct(receiver);
       } else if (prop == 'unshift') {
@@ -97,17 +111,18 @@ export function createArrayProxy(bInstance, valueChangedEvent, obj, ownProp, sup
         }
         return value;
       }
-    }),
+    },
     set(target, prop, value, receiver) {
+      const proxifiedValue = createRecursiveScope(bInstance, superScope && superScope[EL_ATTR], valueChangedEvent, value, 'lst', receiver);
       if (prop == 'length' || !isNaN(1 * prop)) {
         const old = [...obj];
         const oldValue = target[prop];
-        target[prop] = value;
-        if (oldValue != value) {
+        target[prop] = proxifiedValue;
+        if (oldValue != proxifiedValue) {
           valueChangedEvent(superScope, ownProp, old, obj);
         }
       } else {
-        target[prop] = value;
+        target[prop] = proxifiedValue;
       }
       return true;
     },
@@ -122,6 +137,12 @@ export function createArrayProxy(bInstance, valueChangedEvent, obj, ownProp, sup
       return true;
     },
   });
-  return scope;
+  for (const [index, value] of Object.entries(obj)) {
+    const proxifiedValue = createRecursiveScope(bInstance, superScope && superScope[EL_ATTR], valueChangedEvent, value, 'lst', proxy);
+    if (value != proxifiedValue) {
+      obj[index] = proxifiedValue;
+    }
+  }
+  return proxy;
 }
 
