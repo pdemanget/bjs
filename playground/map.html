@@ -1,0 +1,129 @@
+<!doctype html>
+<!-- openstreetmap demo -->
+<!-- TODO autoread url - fill form -->
+<!-- TODO dynamic markers, polygons, edition -->
+<!-- TODO Geo country, cities, position, borders field type city{name country position zipcodes} -->
+<!-- UX yourmap, points, pathes, by category, history -->
+<!--
+Simplified geo data
+country{code, code3, name, border:[], langs, timezones, currencies, phone_index}
+city{name country position zipcodes, phone_indexes, idlocal}
+street{name, idlocalcity}
+
+https://france-geojson.gregoiredavid.fr/repo/regions.geojson
+ 1. j'intègre LeafJS depuis un exemple, je matte la doc pour avoir position/events 
+ 2. je recherche des données opendata pour avoir les villes coordonées et faire une recherche par villes
+ 3. des données opendata aussi pour avoir des frontières: format geojson
+ 4. je cherche mon format de stockage entre standard geoJson, et custom pour les liste de saisies de villes (le format gouv.fr es custom de toutes façons
+
+https://leafletjs.com/examples/geojson/
+
+-->
+
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title></title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
+	<link href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" rel="stylesheet"/>
+	<style>
+		#osm-map{
+			height: 720px !important;
+		}
+	</style>
+
+</head>
+<body>
+<form>
+<input type="text" name="zoom">
+<input type="text" name="coordinates" size="45">
+
+</form>
+<button onclick="refresh()">refresh</button>
+<div id="osm-map"></div>
+<script>
+let doc=document;
+// Where you want to render the map.
+var element = document.getElementById('osm-map');
+
+// Height has to be set. You can do this in CSS too.
+element.style = 'height:300px;';
+
+// Create Leaflet map on map element.
+var map = L.map(element);
+
+// Add OSM tile layer to the Leaflet map.
+L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+// Target's GPS coordinates.
+// https://download.geonames.org/export/dump/cities-500.zip (tab)
+// https://www.data.gouv.fr/fr/datasets/villes-de-france/
+var Lyon=[45.74846,4.84671]
+var target = L.latLng('45.74846', '4.84671');
+
+// Set map's center to target with zoom 14.
+let zoom_min=2;// 0 and 1 ar kind of useless
+let zoom_world=3
+let zoom_country=6
+let zoom_region=9
+let zoom_city=12
+let zoom_streets=15
+let zoom_max=18
+map.setView(target, zoom_country);
+
+// Place a marker on the same location.
+// L.marker(target).addTo(map);
+L.marker(target).addTo(map)
+  .bindPopup('Lyon')
+    .openPopup();
+	
+	/**
+	Leaf.js documentation
+	https://leafletjs.com/reference.html
+	
+	var circle = L.circle([51.508, -0.11], {
+    color: 'red',
+    fillColor: '#f03',
+    fillOpacity: 0.5,
+    radius: 500
+}).addTo(map);
+
+Adding a polygon is as easy:
+
+var polygon = L.polygon([
+    [51.509, -0.08],
+    [51.503, -0.06],
+    [51.51, -0.047]
+]).addTo(map);
+
+	*/
+	
+	
+	function refresh(){
+		
+		doc.getElementsByName("zoom")[0].value=map.getZoom();
+		doc.getElementsByName("coordinates")[0].value=map.getCenter().lat+","+map.getCenter().lng;
+	}
+	
+	map.on('click', function(ev) {
+		console.log('click')
+		let pos=ev.latlng;
+		doc.getElementsByName("coordinates")[0].value=pos.lat+","+pos.lng;
+
+	});
+	
+	map.on('moveend', function(ev) {
+		console.log('move'); // ev is an event object (MouseEvent in this case)
+		refresh();
+	});
+	
+	map.on('zoomend', function(ev) {
+		console.log('zoom'); // ev is an event object (MouseEvent in this case)
+		refresh();
+	});
+</script>
+</body>
+</html>
